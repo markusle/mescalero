@@ -119,6 +119,7 @@ void print_hash(string fileName, sha256Hash hash);
 int process_file(const char *fpath, const struct stat *sb,
                  DataBase& db, int requestType);
 int walk_path(string path, DataBase& db, int requestType);
+void hash_to_string(sha256Hash hash, string& hashString);
 
 const int UPDATE_REQUEST = 0;
 const int CHECK_REQUEST = 1;
@@ -224,16 +225,19 @@ int process_file(const char *fpath, const struct stat *sb,
   }
     
   sha256Hash hash = encode_as_sha256(file);
-  print_hash(fileName, hash);
+  //print_hash(fileName, hash);
 
   std::ostringstream request;
+  string hashString;
+  hash_to_string(hash, hashString);
+
   if (requestType == UPDATE_REQUEST) {
     request << "INSERT INTO FileTable (name, hash) VALUES("
-            << "'" << fileName << "', '123');";
+            << "'" << fileName << "', '" << hashString << "');";
   }
   db.query(request.str());
     
-  cout << "m_time " << ctime(&sb->st_mtime) << endl;
+  //cout << "m_time " << ctime(&sb->st_mtime) << endl;
   return 0; 
 }
 
@@ -248,6 +252,23 @@ void print_hash(string fileName, sha256Hash hash) {
     
   cout << endl;
 }
+
+
+void hash_to_string(sha256Hash hash, string& hashString) {
+
+  hashString.clear();
+
+  char c[3];
+  for (unsigned char &item : *hash) {
+    sprintf(c, "%02x", item);
+    hashString += c;
+  }
+}
+ 
+
+  
+
+
 
 
 
