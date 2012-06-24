@@ -43,6 +43,10 @@ public:
 
   
   vector<vector<string>> query(string query) {
+
+    // re-initialize success
+    success_ = true;
+    
     sqlite3_stmt* statement;
     vector<vector<string>> results;
 
@@ -76,6 +80,7 @@ public:
     string error = sqlite3_errmsg(db_);
     if (error != "not an error") {
       cout << query << " " << error << endl;
+      success_ = false;
     }
 
     return results;
@@ -175,10 +180,22 @@ int walk_path(string path, DataBase& db, int requestType) {
     return 1;
   }
 
+  // begin transaction
+  db.query("BEGIN IMMEDIATE TRANSACTION");
+  if (!db.success()) {
+    return 1;
+  }
+  
   while ((file = fts_read(fileTree))) {
     if (file->fts_info == FTS_F) {
       process_file(file->fts_accpath, file->fts_statp, db, requestType);
     }
+  }
+
+  // end transaction - if it fails roll it back
+  db.query("COMMIT TRANSACTION");
+  if (!db.success()) {
+    db.query("ROLLBACK TRANSACTION");
   }
 
   if (errno != 0) {
