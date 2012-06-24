@@ -1,36 +1,33 @@
+/*
+ *
+ * (c) 2012 Markus Dittrich
+ *
+ * This program is free software; you can redistribute it
+ * and/or modify it under the terms of the GNU General Public
+ * License Version 3 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License Version 3 for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this program; if not, write to the Free
+ * Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ *
+ */
 
 #ifndef MESCALERO_HPP
 #define MESCALERO_HPP
 
-//#include <algorithm>
-//#include <iterator>
-//#include <iostream>
-//#include <fstream>
-//#include <sstream>
-//#include <string>
-//#include <memory>
-//#include <cstdio>
-//#include <vector>
-//#include <openssl/sha.h>
-//#include <fts.h>
-//#include <sys/stat.h>
-//#include <time.h>
-//#include <sqlite3.h>
-//#include <boost/filesystem.hpp>
-
-//using std::cout;
-//using std::endl;
-//using std::string;
-//using std::ifstream;
-//using std::vector;
-//using std::shared_ptr;
 
 typedef std::shared_ptr<std::vector<unsigned char>> sha256Hash;
+
 
 /* macros for type of request */
 const int UPDATE_REQUEST = 0;
 const int CHECK_REQUEST = 1;
-
 
 
 /* lightweight wrapper around sqlite3 database */
