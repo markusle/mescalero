@@ -1,3 +1,23 @@
+/*
+ *
+ * (c) 2012 Markus Dittrich
+ *
+ * This program is free software; you can redistribute it
+ * and/or modify it under the terms of the GNU General Public
+ * License Version 3 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License Version 3 for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this program; if not, write to the Free
+ * Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ *
+ */
+
 #include <algorithm>
 #include <iterator>
 #include <iostream>
@@ -14,115 +34,14 @@
 #include <sqlite3.h>
 #include <boost/filesystem.hpp>
 
+#include "mescalero.hpp"
+
 using std::cout;
 using std::endl;
 using std::string;
 using std::ifstream;
 using std::vector;
 using std::shared_ptr;
-
-
-
-class DataBase {
-
-public:
-
-  DataBase(string databaseName) :
-    db_(NULL),
-    success_(true) {
-
-    if (_open_database(databaseName) != 0) {
-      success_ = false;
-    }
-  }
-
-  ~DataBase() {
-    close();
-    sqlite3_shutdown();
-  }
-
-  
-  vector<vector<string>> query(string query) {
-
-    // re-initialize success
-    success_ = true;
-    
-    sqlite3_stmt* statement;
-    vector<vector<string>> results;
-
-    if(sqlite3_prepare_v2(db_, query.c_str(), -1, &statement, 0)
-       == SQLITE_OK) {
-      
-      int cols = sqlite3_column_count(statement);
-      int result = 0;
-      
-      while(true) {
-        result = sqlite3_step(statement);
-
-        if(result == SQLITE_ROW) {
-          vector<string> values;
-          for(int col = 0; col < cols; col++) {
-            const char* content = reinterpret_cast<const char*>(
-              sqlite3_column_text(statement, col));
-            if (content) {
-              values.push_back(content);
-            }
-          }
-          results.push_back(values);
-        } else {
-          break;
-        }
-      }
-
-      sqlite3_finalize(statement);
-    }
-
-    string error = sqlite3_errmsg(db_);
-    if (error != "not an error") {
-      cout << query << " " << error << endl;
-      success_ = false;
-    }
-
-    return results;
-  }
-
-  
-  bool success() { return success_; }
-
-  void close() { sqlite3_close(db_); }
-    
-    
-
-private:
-
-  sqlite3* db_;
-  bool success_;
-
-
-  int _open_database(string name) {
-    sqlite3_initialize();
-    int rc = sqlite3_open_v2(name.c_str(), &db_, SQLITE_OPEN_READWRITE |
-                             SQLITE_OPEN_CREATE, NULL);
-    if (rc != SQLITE_OK) {
-      sqlite3_close(db_);
-      return 1;
-    }
-
-    return 0;
-  }
-};
-
-
-typedef shared_ptr<vector<unsigned char>> sha256Hash;
-sha256Hash encode_as_sha256(ifstream &filename);
-void print_hash(string fileName, sha256Hash hash);
-int process_file(const char *fpath, const struct stat *sb,
-                 DataBase& db, int requestType);
-int walk_path(string path, DataBase& db, int requestType);
-void hash_to_string(sha256Hash hash, string& hashString);
-
-const int UPDATE_REQUEST = 0;
-const int CHECK_REQUEST = 1;
 
 
 /* main entry point */
@@ -234,8 +153,11 @@ int process_file(const char *fpath, const struct stat *sb,
   if (requestType == UPDATE_REQUEST) {
     request << "INSERT INTO FileTable (name, hash) VALUES("
             << "'" << fileName << "', '" << hashString << "');";
-  }
-  db.query(request.str());
+    db.query(request.str());
+  } 
+    
+
+
     
   //cout << "m_time " << ctime(&sb->st_mtime) << endl;
   return 0; 
@@ -266,11 +188,6 @@ void hash_to_string(sha256Hash hash, string& hashString) {
 }
  
 
-  
-
-
-
-
 
 /* function computing the sha256 hash of the file
  * reference by ifstream file */
@@ -295,3 +212,86 @@ sha256Hash encode_as_sha256(ifstream &file) {
   
   return hash;
 }
+
+
+
+/*********************************************************************
+ * 
+ * member defitions for Database class
+ * 
+ ********************************************************************/
+DataBase::DataBase(string databaseName) :
+  db_(NULL),
+  success_(true) {
+
+  if (_open_database(databaseName) != 0) {
+    success_ = false;
+  }
+}
+
+DataBase::~DataBase() {
+  close();
+  sqlite3_shutdown();
+}
+
+
+/*
+ * main workhorse - interacts with database
+ */
+vector<vector<string>> DataBase::query(string query) {
+
+  // re-initialize success
+  success_ = true;
+    
+  sqlite3_stmt* statement;
+  vector<vector<string>> results;
+
+  if(sqlite3_prepare_v2(db_, query.c_str(), -1, &statement, 0)
+     == SQLITE_OK) {
+      
+    int cols = sqlite3_column_count(statement);
+    int result = 0;
+      
+    while(true) {
+      result = sqlite3_step(statement);
+
+      if(result == SQLITE_ROW) {
+        vector<string> values;
+        for(int col = 0; col < cols; col++) {
+          const char* content = reinterpret_cast<const char*>(
+            sqlite3_column_text(statement, col));
+          if (content) {
+            values.push_back(content);
+          }
+        }
+        results.push_back(values);
+      } else {
+        break;
+      }
+    }
+
+    sqlite3_finalize(statement);
+  }
+
+  string error = sqlite3_errmsg(db_);
+  if (error != "not an error") {
+    cout << query << " " << error << endl;
+    success_ = false;
+  }
+
+  return results;
+}
+
+  
+int DataBase::_open_database(string name) {
+  sqlite3_initialize();
+  int rc = sqlite3_open_v2(name.c_str(), &db_, SQLITE_OPEN_READWRITE |
+                           SQLITE_OPEN_CREATE, NULL);
+  if (rc != SQLITE_OK) {
+    sqlite3_close(db_);
+    return 1;
+  }
+
+  return 0;
+}
+
