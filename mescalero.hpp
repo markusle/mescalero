@@ -55,10 +55,12 @@ private:
 /* function declarations */
 sha256Hash encode_as_sha256(std::ifstream &filename);
 void print_hash(std::string fileName, sha256Hash hash);
-int process_file(const char *fpath, const struct stat *sb,
-                 DataBase& db, int requestType);
-int walk_path(std::string path, DataBase& db, int requestType);
-void hash_to_string(sha256Hash hash, std::string& hashString);
+int update_file(const char *fpath, const struct stat *sb,
+                DataBase &db);
+int check_file(const char *fpath, const struct stat *sb,
+               DataBase &db);
+int walk_path(std::string path, DataBase &db, int requestType);
+void hash_to_string(sha256Hash hash, std::string &hashString);
 
 
 #endif

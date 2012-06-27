@@ -1,6 +1,6 @@
 /*
  *
- * (c) 2012 Markus Dittrich
+ * (C) 2012 Markus Dittrich
  *
  * This program is free software; you can redistribute it
  * and/or modify it under the terms of the GNU General Public
@@ -100,22 +100,35 @@ int walk_path(string path, DataBase& db, int requestType) {
     return 1;
   }
 
-  // begin transaction
-  db.query("BEGIN IMMEDIATE TRANSACTION");
-  if (!db.success()) {
-    return 1;
-  }
-  
-  while ((file = fts_read(fileTree))) {
-    if (file->fts_info == FTS_F) {
-      process_file(file->fts_accpath, file->fts_statp, db, requestType);
-    }
-  }
 
-  // end transaction - if it fails roll it back
-  db.query("COMMIT TRANSACTION");
-  if (!db.success()) {
-    db.query("ROLLBACK TRANSACTION");
+  // updates can be transactioned
+  if (requestType == UPDATE_REQUEST) {
+
+    // begin transaction
+    db.query("BEGIN IMMEDIATE TRANSACTION");
+    if (!db.success()) {
+      return 1;
+    }
+  
+    while ((file = fts_read(fileTree))) {
+      if (file->fts_info == FTS_F) {
+        update_file(file->fts_accpath, file->fts_statp, db);
+      }
+    }
+
+
+    // end transaction - if it fails roll it back
+    db.query("COMMIT TRANSACTION");
+    if (!db.success()) {
+      db.query("ROLLBACK TRANSACTION");
+    }
+  } else if (requestType == CHECK_REQUEST) {
+
+    while ((file = fts_read(fileTree))) {
+      if (file->fts_info == FTS_F) {
+        check_file(file->fts_accpath, file->fts_statp, db);
+      }
+    }
   }
 
   if (errno != 0) {
@@ -133,9 +146,9 @@ int walk_path(string path, DataBase& db, int requestType) {
   
 
 
-/* process each file in the filetree walk */
-int process_file(const char *fpath, const struct stat *sb,
-                 DataBase& db, int requestType) {
+/* process each file in the filetree walk and update its information
+ * in the database */
+int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
 
   string fileName(fpath);
   ifstream file(fileName);
@@ -144,24 +157,53 @@ int process_file(const char *fpath, const struct stat *sb,
   }
     
   sha256Hash hash = encode_as_sha256(file);
-  //print_hash(fileName, hash);
 
   std::ostringstream request;
   string hashString;
   hash_to_string(hash, hashString);
 
-  if (requestType == UPDATE_REQUEST) {
-    request << "INSERT INTO FileTable (name, hash) VALUES("
-            << "'" << fileName << "', '" << hashString << "');";
-    db.query(request.str());
-  } 
-    
-
-
+  request << "INSERT INTO FileTable (name, hash) VALUES("
+          << "'" << fileName << "', '" << hashString << "');";
+  db.query(request.str());
     
   //cout << "m_time " << ctime(&sb->st_mtime) << endl;
   return 0; 
 }
+
+
+
+/* process each file in the filetree walk and check its information
+ * against the data in the database */
+int check_file(const char *fpath, const struct stat *sb, DataBase &db) {
+
+  string fileName(fpath);
+  ifstream file(fileName);
+  if (!file) {
+    return 1;
+  }
+    
+  sha256Hash hash = encode_as_sha256(file);
+
+  string hashString;
+  hash_to_string(hash, hashString);
+
+  std::ostringstream request;
+  request << "SELECT hash FROM FileTable where name = '"
+          << fileName << "'";
+  vector<vector<string>> result = db.query(request.str());
+
+  for (vector<string> &item : result) {
+    for (string &element : item) {
+      if (element != hashString) {
+        cout << "Error: file hash mismatch for " << fileName << endl;
+      }
+    }
+  }
+    
+  //cout << "m_time " << ctime(&sb->st_mtime) << endl;
+  return 0; 
+}
+
 
 
 /* helper function to print out a file's hash */
