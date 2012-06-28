@@ -53,7 +53,9 @@ int main(int argc, char** argv) {
     cout << "Failed to open database" << endl;
     return 1;
   } else {
-    db.query("CREATE TABLE IF NOT EXISTS FileTable (name TEXT, hash TEXT)");
+    db.query("CREATE TABLE IF NOT EXISTS FileTable "
+             "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
+             "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
   }
 
   // determine type of request
@@ -155,18 +157,23 @@ int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
   if (!file) {
     return 1;
   }
-    
+     db.query("CREATE TABLE IF NOT EXISTS FileTable "
+             "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
+             "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
+     
   sha256Hash hash = encode_as_sha256(file);
-
-  std::ostringstream request;
   string hashString;
   hash_to_string(hash, hashString);
 
-  request << "INSERT INTO FileTable (name, hash) VALUES("
-          << "'" << fileName << "', '" << hashString << "');";
+  std::ostringstream request;
+  request << "INSERT INTO FileTable (name, hash, uid, gid, mode, "
+             "size, mtime, ctime) VALUES("
+          << "'" << fileName << "', '" << hashString << "', '"
+          << sb->st_uid << "', '" << sb->st_gid << "', '"
+          << sb->st_mode << "', '" << sb->st_size << "', '"
+          << sb->st_mtime << "', '" << sb->st_ctime << "');";
   db.query(request.str());
     
-  //cout << "m_time " << ctime(&sb->st_mtime) << endl;
   return 0; 
 }
 
@@ -183,28 +190,39 @@ int check_file(const char *fpath, const struct stat *sb, DataBase &db) {
   }
     
   sha256Hash hash = encode_as_sha256(file);
-
   string hashString;
   hash_to_string(hash, hashString);
 
   std::ostringstream request;
-  request << "SELECT hash FROM FileTable where name = '"
+  request << "SELECT * FROM FileTable where name = '"
           << fileName << "'";
   vector<vector<string>> result = db.query(request.str());
 
-  for (vector<string> &item : result) {
-    for (string &element : item) {
-      if (element != hashString) {
-        cout << "Error: file hash mismatch for " << fileName << endl;
-      }
-    }
+  /* if we get more than a single result we're in trouble */
+  if (result.size() != 1) {
+    cout << "Error: multiple results returned for file "
+         << fileName << "  " << endl;
+    return 1;
   }
-    
-  //cout << "m_time " << ctime(&sb->st_mtime) << endl;
+
+  vector<string> testResult = result[0];
+  if (testResult[1] != hashString) {
+    cout << "Error: file hash mismatch for " << fileName << endl;
+  } else if (testResult[6] != to_string(sb->st_mtime) ) {
+    cout << "Error: m_time mismatch for " << fileName << endl;
+  }
+
   return 0; 
 }
 
 
+/* simple template helper to convert stat types to string */
+template <typename T> std::string to_string(T inValue) {
+  std::ostringstream converter;
+  converter << inValue;
+  return converter.str();
+}
+  
 
 /* helper function to print out a file's hash */
 void print_hash(string fileName, sha256Hash hash) {

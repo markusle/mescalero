@@ -1,7 +1,7 @@
 
 
 all:
-	clang++ -g -std=c++11 -Wall -O4 mescalero.cpp -o mescalero -lcrypto -lboost_filesystem -lboost_system -lsqlite3
+	clang++ -g -std=c++11 -Wall -O0 mescalero.cpp -o mescalero -lcrypto -lboost_filesystem -lboost_system -lsqlite3
 
 
 .PHONY: clean

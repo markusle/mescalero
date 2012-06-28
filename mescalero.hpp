@@ -62,5 +62,6 @@ int check_file(const char *fpath, const struct stat *sb,
 int walk_path(std::string path, DataBase &db, int requestType);
 void hash_to_string(sha256Hash hash, std::string &hashString);
 
+template <typename T> std::string to_string(T inValue);
 
 #endif
