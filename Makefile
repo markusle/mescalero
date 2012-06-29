@@ -1,7 +1,19 @@
+CC = clang++
+CFLAGS = -std=c++11 -Wall -g -O0
+LDFLAGS = -lcrypto -lboost_filesystem -lboost_system -lsqlite3
+includes = $(wildcard ./*.hpp)
 
 
-all:
-	clang++ -g -std=c++11 -Wall -O0 mescalero.cpp -o mescalero -lcrypto -lboost_filesystem -lboost_system -lsqlite3
+all: mescalero
+
+mescalero: mescalero.o misc.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+
+.cpp.o: ${includes}
+	$(CC) $(CFLAGS) -c $<
+
+#all:
+#	clang++ -g -std=c++11 -Wall -O0 mescalero.cpp -o mescalero -lcrypto -lboost_filesystem -lboost_system -lsqlite3
 
 
 .PHONY: clean

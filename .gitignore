@@ -1,3 +1,5 @@
 mescalero
 test.db
+*.o
 \#*
+TAGS

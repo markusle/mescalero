@@ -18,13 +18,10 @@
  *
  */
 
-#include <algorithm>
-#include <iterator>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <memory>
 #include <cstdio>
 #include <vector>
 #include <openssl/sha.h>
@@ -35,13 +32,13 @@
 #include <boost/filesystem.hpp>
 
 #include "mescalero.hpp"
+#include "misc.hpp"
 
 using std::cout;
 using std::endl;
 using std::string;
 using std::ifstream;
 using std::vector;
-using std::shared_ptr;
 
 
 /* main entry point */
@@ -161,7 +158,7 @@ int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
              "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
              "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
      
-  sha256Hash hash = encode_as_sha256(file);
+  sha256Hash hash = hash_as_sha256(file);
   string hashString;
   hash_to_string(hash, hashString);
 
@@ -181,98 +178,49 @@ int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
 
 /* process each file in the filetree walk and check its information
  * against the data in the database */
-int check_file(const char *fpath, const struct stat *sb, DataBase &db) {
+int check_file(const char *fpath,
+               const struct stat *sb,
+               DataBase &db) {
 
   string fileName(fpath);
-  ifstream file(fileName);
-  if (!file) {
-    return 1;
-  }
-    
-  sha256Hash hash = encode_as_sha256(file);
-  string hashString;
-  hash_to_string(hash, hashString);
-
   std::ostringstream request;
   request << "SELECT * FROM FileTable where name = '"
           << fileName << "'";
   vector<vector<string>> result = db.query(request.str());
 
-  /* if we get more than a single result we're in trouble */
-  if (result.size() != 1) {
-    cout << "Error: multiple results returned for file "
-         << fileName << "  " << endl;
+  /* if we get none or more than a single result we're in trouble */
+  if (result.empty()) {
+    err_msg(fileName + " not in database.");
+    return 1;
+  } else if (result.size() != 1) {
+    err_msg("multiple results returned for file " + fileName);
     return 1;
   }
 
+  /* make sure we have valid query result */
   vector<string> testResult = result[0];
-  if (testResult[1] != hashString) {
-    cout << "Error: file hash mismatch for " << fileName << endl;
-  } else if (testResult[6] != to_string(sb->st_mtime) ) {
-    cout << "Error: m_time mismatch for " << fileName << endl;
+  if (testResult.size() != 8) {
+    err_msg("incomplete query from database. ");
   }
 
+  /* check contents */
+  ifstream file(fileName);
+  if (!file) {
+    return 1;
+  }
+  sha256Hash hash = hash_as_sha256(file);
+  string hashString;
+  hash_to_string(hash, hashString);
+
+  // all checks out now look at the result and print error
+  // if needed
+  check_and_print_result(hashString, testResult, fileName, sb);
+ 
   return 0; 
 }
 
 
-/* simple template helper to convert stat types to string */
-template <typename T> std::string to_string(T inValue) {
-  std::ostringstream converter;
-  converter << inValue;
-  return converter.str();
-}
   
-
-/* helper function to print out a file's hash */
-void print_hash(string fileName, sha256Hash hash) {
-
-  cout << fileName << ":  ";
-  for (unsigned char &item : *hash) {
-    printf("%02x", item);
-  }
-    
-  cout << endl;
-}
-
-
-void hash_to_string(sha256Hash hash, string& hashString) {
-
-  hashString.clear();
-
-  char c[3];
-  for (unsigned char &item : *hash) {
-    sprintf(c, "%02x", item);
-    hashString += c;
-  }
-}
- 
-
-
-/* function computing the sha256 hash of the file
- * reference by ifstream file */
-sha256Hash encode_as_sha256(ifstream &file) {
-  
-  // initialize OpenSSL
-  SHA256_CTX context;
-  unsigned char md[SHA256_DIGEST_LENGTH];
-  SHA256_Init(&context);
-    
-  // process file
-  char buf[BUFSIZ];
-  while (file) {
-    file.read(buf, BUFSIZ);
-    SHA256_Update(&context, buf, file.gcount()); 
-  }
-
-  SHA256_Final(md, &context);
-
-  sha256Hash hash(new vector<unsigned char>);
-  std::copy(md, md+SHA256_DIGEST_LENGTH, std::back_inserter(*hash));
-  
-  return hash;
-}
-
 
 
 /*********************************************************************
