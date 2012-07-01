@@ -165,10 +165,10 @@ int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
   std::ostringstream request;
   request << "INSERT INTO FileTable (name, hash, uid, gid, mode, "
              "size, mtime, ctime) VALUES("
-          << "'" << fileName << "', '" << hashString << "', '"
-          << sb->st_uid << "', '" << sb->st_gid << "', '"
-          << sb->st_mode << "', '" << sb->st_size << "', '"
-          << sb->st_mtime << "', '" << sb->st_ctime << "');";
+          << "\"" << fileName << "\", \"" << hashString << "\", \""
+          << sb->st_uid << "\", \"" << sb->st_gid << "\", \""
+          << sb->st_mode << "\", \"" << sb->st_size << "\", \""
+          << sb->st_mtime << "\", \"" << sb->st_ctime << "\");";
   db.query(request.str());
     
   return 0; 
@@ -184,8 +184,8 @@ int check_file(const char *fpath,
 
   string fileName(fpath);
   std::ostringstream request;
-  request << "SELECT * FROM FileTable where name = '"
-          << fileName << "'";
+  request << "SELECT * FROM FileTable where name = \""
+          << fileName << "\"";
   vector<vector<string>> result = db.query(request.str());
 
   /* if we get none or more than a single result we're in trouble */
