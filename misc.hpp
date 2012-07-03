@@ -46,6 +46,9 @@ void result_formatter(const std::string &name,
                       std::string &result);
 
 
+void usage();
+
+
 /* simple template helper to convert stat types to string */
 template <typename T> std::string to_string(T inValue) {
   std::ostringstream converter;

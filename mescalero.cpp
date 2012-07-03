@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <sqlite3.h>
+#include <unistd.h>
 #include <boost/filesystem.hpp>
 
 #include "mescalero.hpp"
@@ -40,12 +41,54 @@ using std::string;
 using std::ifstream;
 using std::vector;
 
+/* hardcoded path to database for now */
+const std::string DATABASE_PATH = "test.db";
+
 
 /* main entry point */
 int main(int argc, char** argv) {
 
+  // parse command line
+  if (argc != 3) {
+    usage();
+    return 1;
+  }
+
+  // check command line arguments
+  actionToggle action = NONE;
+  int c;
+  while ((c = getopt(argc,argv, "uc") ) != -1 ) {
+    switch (c) {
+        case 'u':
+          action = UPDATE_REQUEST;
+          break;
+        case 'c':
+          action = CHECK_REQUEST;
+          break;
+        case '?':
+          usage();
+          break;
+        case ':':
+          usage();
+          break;
+        default:
+          usage();
+          break;
+    }
+  }
+
+  // make sure user specified one of u or c
+  if (action == NONE) {
+    cout << "Error: Please specify at least on of -u or -c" << endl;
+    usage();
+    return 1;
+  }
+
+  // grab path at which to update/check
+  std::string path = argv[optind];
+  
   // open database
-  DataBase db("test.db");
+  DataBase db(DATABASE_PATH);
   if (!db.success()) {
     cout << "Failed to open database" << endl;
     return 1;
@@ -55,28 +98,10 @@ int main(int argc, char** argv) {
              "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
   }
 
-  // determine type of request
-  string request;
-  if (argv[1]) {
-    request = string(argv[1]);
-  } else {
-    request = string("none");
-  }
-    
-  int requestType = -1;
-  if (request == "update") {
-    requestType = UPDATE_REQUEST;
-  } else if (request == "check") {
-    requestType = CHECK_REQUEST;
-  } else {
-    cout << "Error: Unknown request type " << request << endl;
-    return 1;
-  }
-  
   // generate absolute path
-  boost::filesystem::path absPath = boost::filesystem::canonical(argv[2]);
+  boost::filesystem::path absPath = boost::filesystem::canonical(path);
 
-  if (walk_path(absPath.string(), db, requestType) != 0) {
+  if (walk_path(absPath.string(), db, action) != 0) {
     cout << "Error in walk_path" << endl;
     return 1;
   }
@@ -87,7 +112,7 @@ int main(int argc, char** argv) {
 
 
 /* walk directory hierarchy starting at path */
-int walk_path(string path, DataBase& db, int requestType) {
+int walk_path(string path, DataBase& db, actionToggle requestType) {
 
   FTS* fileTree;
   FTSENT* file;

@@ -23,8 +23,7 @@
 
 
 /* macros for type of request */
-const int UPDATE_REQUEST = 0;
-const int CHECK_REQUEST = 1;
+enum actionToggle {NONE, UPDATE_REQUEST, CHECK_REQUEST};
 
 
 /* lightweight wrapper around sqlite3 database */
@@ -61,7 +60,7 @@ int check_file(const char *fpath,
 
 int walk_path(std::string path,
               DataBase &db,
-              int requestType);
+              actionToggle requestType);
 
 
 
