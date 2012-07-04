@@ -141,7 +141,7 @@ void result_formatter(const string &name,
 
   result = result + name + " mismatch :: ";
   result = result + "(F) " + found + " | ";
-  result = result + "(E) " + expected + "\n";
+  result = result + "(C) " + expected + "\n";
 }
 
 

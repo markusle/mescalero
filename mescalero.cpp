@@ -98,9 +98,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // grab path to use for updating
+  // grab path to use for updating and checking
+  // if one exists
   std::string path;
-  
+  if (db.has_table("ConfigTable"))
+  {
+    path = get_path_from_database(db);
+    if (path.empty()) {
+      return 1;
+    }
+  }
+ 
   if (action == UPDATE_REQUEST)
   {
     // see if user supplied name on command line
@@ -114,19 +122,6 @@ int main(int argc, char** argv) {
       db.query("CREATE TABLE ConfigTable (path TEXT);");
       db.query("INSERT INTO ConfigTable (path) VALUES (\"" + path + "\");");
     }
-    else if (db.has_table("ConfigTable"))
-    {
-      path = get_path_from_database(db);
-      if (path.empty()) {
-        return 1;
-      }
-    }
-    else
-    {
-      cerr << "Error: Please specify a path to a file tree for updating\n"
-           << "       the database." << endl;
-      return 1;
-    }
 
     // erase previous table and start a new one
     // FIXME: In principle we could just update the entries here.
@@ -137,24 +132,17 @@ int main(int argc, char** argv) {
              "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
              "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
   }
-  else if (action == CHECK_REQUEST)
+
+  // if we don't have a path at this point the user should have
+  // specified one
+  if (path.empty())
   {
-    // Check if we have a table. if not bail out, otherwise
-    // grab the path and go for it
-    if (db.has_table("ConfigTable")) {
-      path = get_path_from_database(db);
-    }
-    else
-    {
-      return 1;
-    }
+    cerr << "Error: Please specify a path to a file tree for updating\n"
+         << "       the database." << endl;
+    return 1;
   }
-  else
-  {
-    // we should never end up here
-    assert(true);
-  }
-    
+
+  // walk path
   if (walk_path(path, db, action) != 0) {
     cout << "Error in walk_path" << endl;
     return 1;
@@ -162,6 +150,7 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
 
 
 /*
@@ -221,24 +210,33 @@ int walk_path(string path, DataBase& db, actionToggle requestType) {
 
     // end transaction - if it fails roll it back
     db.query("COMMIT TRANSACTION");
-    if (!db.success()) {
+    if (!db.success())
+    {
       db.query("ROLLBACK TRANSACTION");
     }
-  } else if (requestType == CHECK_REQUEST) {
-
-    while ((file = fts_read(fileTree))) {
-      if (file->fts_info == FTS_F) {
-        check_file(file->fts_accpath, file->fts_statp, db);
+  }
+  else if (requestType == CHECK_REQUEST)
+  {
+    while ((file = fts_read(fileTree)))
+    {
+      if (file->fts_info == FTS_F)
+      {
+        if (check_file(file->fts_accpath, file->fts_statp, db))
+        {
+          cerr << "Error: " << file->fts_accpath << " not in database";
+        }
       }
     }
   }
 
-  if (errno != 0) {
+  if (errno != 0)
+  {
      cout << "Error: fts_read failed" << endl;
      return 1;
   }
 
-  if (fts_close(fileTree) < 0) {
+  if (fts_close(fileTree) < 0)
+  {
      cout << "Error: fts_read failed" << endl;
      return 1;
   }
@@ -312,8 +310,7 @@ int check_file(const char *fpath,
   string hashString;
   hash_to_string(hash, hashString);
 
-  // all checks out now look at the result and print error
-  // if needed
+  // all checks out now look at the result and print error if needed
   check_and_print_result(hashString, testResult, fileName, sb);
  
   return 0; 
