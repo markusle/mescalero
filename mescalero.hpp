@@ -34,14 +34,18 @@ int update_file(const char *fpath,
                 const struct stat *sb,
                 DataBase &db);
 
-int check_file(const char *fpath,
-               const struct stat *sb,
-               DataBase &db);
+int check_file(std::vector<std::string> referenceValues);
 
 int walk_path(std::string path,
               DataBase &db,
               actionToggle requestType);
 
+int walk_path_to_update(FTS* fileTree,
+                        DataBase& db);
 
+int walk_path_to_check(FTS* fileTree,
+                       DataBase& db);
+
+int check_database_against_fs(DataBase& db);
 
 #endif

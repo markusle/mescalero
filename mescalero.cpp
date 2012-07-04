@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#include <unordered_set>
 #include <vector>
 
 #include "database.hpp"
@@ -41,10 +42,14 @@ using std::cerr;
 using std::endl;
 using std::string;
 using std::ifstream;
+using std::unordered_set;
 using std::vector;
 
 /* hardcoded path to database for now */
 const std::string DATABASE_PATH = "test.db";
+
+/* intervall at which transactions are committed */
+const int COMMIT_INTERVAL = 20000;
 
 
 /* main entry point */
@@ -85,7 +90,7 @@ int main(int argc, char** argv) {
   // make sure user specified one of u or c
   if (action == NONE)
   {
-    cerr << "Error: Please specify at least on of -u or -c" << endl;
+    err_msg("Please specify at least on of -u or -c");
     usage();
     return 1;
   }
@@ -131,21 +136,64 @@ int main(int argc, char** argv) {
     db.query("CREATE TABLE FileTable "
              "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
              "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
-  }
 
-  // if we don't have a path at this point the user should have
-  // specified one
-  if (path.empty())
+    // if we don't have a path at this point the user should have
+    // specified one
+    if (path.empty())
+    {
+      err_msg("Please specify a path to a file tree for updating\n"
+              "       the database.");
+      return 1;
+    }
+
+    if (walk_path(path, db, action) != 0) {
+      err_msg("Error occured in walk_path");
+      return 1;
+    }
+  }
+  else if (action == CHECK_REQUEST)
   {
-    cerr << "Error: Please specify a path to a file tree for updating\n"
-         << "       the database." << endl;
-    return 1;
+    // if we don't have a path at this point the user should have
+    // specified one
+    if (path.empty())
+    {
+      err_msg("Please specify a path to a file tree for updating\n"
+              "the database");
+      return 1;
+    }
+
+    // check properties of all known files
+    check_database_against_fs(db);
+    
+    // check if any files present are not in database
+    if (walk_path(path, db, action) != 0) {
+      cout << "Error in walk_path" << endl;
+      return 1;
+    }
   }
 
-  // walk path
-  if (walk_path(path, db, action) != 0) {
-    cout << "Error in walk_path" << endl;
-    return 1;
+  return 0;
+}
+
+
+/*
+ * this function goes through all entries in the database
+ * and compares them with the current content of the database
+ *
+ */
+int check_database_against_fs(DataBase& db)
+{
+  queryResult results(db.query("SELECT * from FileTable"));
+  for (vector<string>& result : results) {
+    
+    if (result.size() != 8) {
+      err_msg("incomplete query from database. ");
+    }
+
+    if (check_file(result) != 0)
+    {
+      cout << "Warning: " << result[0] << " has disappeared. \n" << endl;
+    }
   }
 
   return 0;
@@ -157,19 +205,20 @@ int main(int argc, char** argv) {
  * query the database for the filesystem path covered by
  * the content.
  */
-string get_path_from_database(DataBase& db) {
+string get_path_from_database(DataBase& db)
+{
 
   string path;
   queryResult result = db.query("SELECT path FROM ConfigTable;");
   if (result.size() != 1)
   {
-    cerr << "Error: Trouble retrieving file path" << endl;
+    err_msg("Trouble retrieving file path");
     return path;
   }
 
   if (result[0].size() != 1)
   {
-    cerr << "Error: Trouble retrieving file path" << endl;
+    err_msg("Trouble retrieving file path");
     return path;
   }
 
@@ -182,68 +231,136 @@ string get_path_from_database(DataBase& db) {
 int walk_path(string path, DataBase& db, actionToggle requestType) {
 
   FTS* fileTree;
-  FTSENT* file;
   char* paths[] = {(char*)path.c_str(), NULL};
 
-  fileTree = fts_open(paths, FTS_LOGICAL, NULL);
+  int options = FTS_LOGICAL;
+  if (requestType == CHECK_REQUEST) {
+    options |= FTS_NOSTAT;
+  }
+
+  fileTree = fts_open(paths, options, NULL);
   if (fileTree == NULL) {
-    cout << "Error: fts_open failed" << endl;
+    err_msg("fts_open failed");
     return 1;
   }
 
-
-  // updates can be transactioned
-  if (requestType == UPDATE_REQUEST) {
-
-    // begin transaction
-    db.query("BEGIN IMMEDIATE TRANSACTION");
-    if (!db.success()) {
-      return 1;
-    }
-  
-    while ((file = fts_read(fileTree))) {
-      if (file->fts_info == FTS_F) {
-        update_file(file->fts_accpath, file->fts_statp, db);
-      }
-    }
-
-
-    // end transaction - if it fails roll it back
-    db.query("COMMIT TRANSACTION");
-    if (!db.success())
+  // walk tree depending on request
+  if (requestType == UPDATE_REQUEST)
+  {
+    if (walk_path_to_update(fileTree, db) != 0)
     {
-      db.query("ROLLBACK TRANSACTION");
+      return 1;
     }
   }
   else if (requestType == CHECK_REQUEST)
   {
-    while ((file = fts_read(fileTree)))
+   if (walk_path_to_check(fileTree, db) != 0)
     {
-      if (file->fts_info == FTS_F)
-      {
-        if (check_file(file->fts_accpath, file->fts_statp, db))
-        {
-          cerr << "Error: " << file->fts_accpath << " not in database";
-        }
-      }
+      return 1;
     }
   }
 
   if (errno != 0)
   {
-     cout << "Error: fts_read failed" << endl;
-     return 1;
+    err_msg("fts_read failed");
+    return 1;
   }
 
   if (fts_close(fileTree) < 0)
   {
-     cout << "Error: fts_read failed" << endl;
-     return 1;
+    err_msg("fts_read failed");
+    return 1;
   }
 
   return 0;
 }
   
+
+/*
+ * walk file tree given by FTS and update the database
+ */
+int walk_path_to_update(FTS* fileTree, DataBase& db)
+{
+  // begin transaction
+  db.query("BEGIN IMMEDIATE TRANSACTION");
+  if (!db.success()) {
+    return 1;
+  }
+
+  long counter = 0;
+  FTSENT* file;
+  while ((file = fts_read(fileTree))) {
+
+    // dump transactions every COMMIT_INTERVAL
+    ++counter;
+    if (counter % COMMIT_INTERVAL == 0) {
+      
+      db.query("COMMIT TRANSACTION");
+      if (!db.success()) {
+        db.query("ROLLBACK TRANSACTION");
+      }
+      
+      db.query("BEGIN IMMEDIATE TRANSACTION");
+      if (!db.success()) {
+        return 1;
+      }
+    }
+        
+    if (file->fts_info == FTS_F) {
+      update_file(file->fts_accpath, file->fts_statp, db);
+    }
+  }
+
+  // end transaction - if it fails roll it back
+  db.query("COMMIT TRANSACTION");
+  if (!db.success())
+  {
+    db.query("ROLLBACK TRANSACTION");
+  }
+
+  return 0;
+}
+
+
+
+/*
+ * walk file tree given by FTS and check if any
+ * entries are not in database
+ *
+ * NOTE: It is very inefficient to walk through
+ * the database entry by entry. Instead we dump
+ * the whole content (filenames only) into an
+ * unordered_set and look through it.
+ */
+int walk_path_to_check(FTS* fileTree, DataBase& db)
+{
+  FTSENT* file;
+
+  queryResult result(db.query("SELECT * FROM FileTable;"));
+  unordered_set<string> allFiles;
+  for(vector<string>& item : result) {
+    if (item.size() != 8) {
+      continue;
+    }
+
+    allFiles.emplace(item[0]);
+  }
+
+  while ((file = fts_read(fileTree)))
+  {
+    if (file->fts_info == FTS_F)
+    {
+      if (allFiles.find(file->fts_accpath) == allFiles.end())
+      {
+        cerr << "Warning: " << file->fts_accpath << " not in database\n"
+             << endl;
+      }
+    }
+  }
+
+  return 0;
+}
+
 
 
 /* process each file in the filetree walk and update its information
@@ -273,45 +390,32 @@ int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
 }
 
 
-
-/* process each file in the filetree walk and check its information
- * against the data in the database */
-int check_file(const char *fpath,
-               const struct stat *sb,
-               DataBase &db) {
-
-  string fileName(fpath);
-  std::ostringstream request;
-  request << "SELECT * FROM FileTable where name = \""
-          << fileName << "\"";
-  vector<vector<string>> result = db.query(request.str());
-
-  /* if we get none or more than a single result we're in trouble */
-  if (result.empty()) {
-    err_msg(fileName + " not in database.");
-    return 1;
-  } else if (result.size() != 1) {
-    err_msg("multiple results returned for file " + fileName);
-    return 1;
-  }
-
-  /* make sure we have valid query result */
-  vector<string> testResult = result[0];
-  if (testResult.size() != 8) {
-    err_msg("incomplete query from database. ");
-  }
-
-  /* check contents */
+/*
+ * compare reference file properties against the current values on
+ * the file system
+ */
+int check_file(std::vector<std::string> referenceValues)
+{
+  string fileName = referenceValues[0];
+  
+  // check contents 
   ifstream file(fileName);
   if (!file) {
     return 1;
   }
+  
   sha256Hash hash = hash_as_sha256(file);
   string hashString;
   hash_to_string(hash, hashString);
 
+  // stat the file
+  struct stat sb;
+  if (stat(fileName.c_str(), &sb) != 0) {
+    return 1;
+  }
+  
   // all checks out now look at the result and print error if needed
-  check_and_print_result(hashString, testResult, fileName, sb);
+  check_and_print_result(hashString, referenceValues, fileName, &sb);
  
   return 0; 
 }

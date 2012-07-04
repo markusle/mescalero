@@ -1,5 +1,5 @@
 CC = clang++
-CFLAGS = -std=c++11 -Wall -g -O4
+CFLAGS = -std=c++11 -Wall -O4
 LDFLAGS = -lcrypto -lboost_filesystem -lboost_system -lsqlite3
 includes = $(wildcard ./*.hpp)
 
