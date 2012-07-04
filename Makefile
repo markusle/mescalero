@@ -5,15 +5,11 @@ includes = $(wildcard ./*.hpp)
 
 all: mescalero
 
-mescalero: mescalero.o misc.o
+mescalero: database.o mescalero.o misc.o
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 .cpp.o: ${includes}
 	$(CC) $(CFLAGS) -c $<
-
-#all:
-#	clang++ -g -std=c++11 -Wall -O0 mescalero.cpp -o mescalero -lcrypto -lboost_filesystem -lboost_system -lsqlite3
-
 
 .PHONY: clean
 

@@ -18,30 +18,36 @@
  *
  */
 
-#ifndef MESCALERO_HPP
-#define MESCALERO_HPP
+#ifndef DATABASE_HPP
+#define DATABASE_HPP
+
+#include <sqlite3.h>
 
 
-/* macros for type of request */
-enum actionToggle {NONE, UPDATE_REQUEST, CHECK_REQUEST};
+typedef std::vector<std::vector<std::string>> queryResult;
 
 
-/* function declarations */
+/* lightweight wrapper around sqlite3 database */
+class DataBase {
 
-std::string get_path_from_database(DataBase& db);
+public:
 
-int update_file(const char *fpath,
-                const struct stat *sb,
-                DataBase &db);
+  DataBase(std::string databaseName, bool verbose);
+  ~DataBase(); 
+  
+  queryResult query(std::string query);
+  
+  bool success() { return success_; }
+  bool has_table(std::string tableName); 
+  void close() { sqlite3_close(db_); }
 
-int check_file(const char *fpath,
-               const struct stat *sb,
-               DataBase &db);
+private:
 
-int walk_path(std::string path,
-              DataBase &db,
-              actionToggle requestType);
+  sqlite3* db_;
+  bool success_;
+  bool verbose_;     // if set print error message for queries
 
-
+  int _open_database(std::string name);
+};
 
 #endif

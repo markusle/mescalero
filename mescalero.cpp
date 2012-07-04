@@ -18,24 +18,26 @@
  *
  */
 
-#include <iostream>
+#include <assert.h>
+#include <boost/filesystem.hpp>
+#include <cstdio>
 #include <fstream>
+#include <fts.h>
+#include <iostream>
+#include <openssl/sha.h>
 #include <sstream>
 #include <string>
-#include <cstdio>
-#include <vector>
-#include <openssl/sha.h>
-#include <fts.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <sqlite3.h>
 #include <unistd.h>
-#include <boost/filesystem.hpp>
+#include <vector>
 
+#include "database.hpp"
 #include "mescalero.hpp"
 #include "misc.hpp"
 
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::string;
 using std::ifstream;
@@ -49,7 +51,8 @@ const std::string DATABASE_PATH = "test.db";
 int main(int argc, char** argv) {
 
   // parse command line
-  if (argc != 3) {
+  if (argc <= 1)
+  {
     usage();
     return 1;
   }
@@ -57,8 +60,10 @@ int main(int argc, char** argv) {
   // check command line arguments
   actionToggle action = NONE;
   int c;
-  while ((c = getopt(argc,argv, "uc") ) != -1 ) {
-    switch (c) {
+  while ((c = getopt(argc,argv, "uc") ) != -1 )
+  {
+    switch (c)
+    {
         case 'u':
           action = UPDATE_REQUEST;
           break;
@@ -78,30 +83,79 @@ int main(int argc, char** argv) {
   }
 
   // make sure user specified one of u or c
-  if (action == NONE) {
-    cout << "Error: Please specify at least on of -u or -c" << endl;
+  if (action == NONE)
+  {
+    cerr << "Error: Please specify at least on of -u or -c" << endl;
     usage();
     return 1;
   }
 
-  // grab path at which to update/check
-  std::string path = argv[optind];
-  
   // open database
-  DataBase db(DATABASE_PATH);
-  if (!db.success()) {
-    cout << "Failed to open database" << endl;
+  DataBase db(DATABASE_PATH, true);
+  if (!db.success())
+  {
+    cerr << "Failed to open database" << endl;
     return 1;
-  } else {
-    db.query("CREATE TABLE IF NOT EXISTS FileTable "
+  }
+
+  // grab path to use for updating
+  std::string path;
+  
+  if (action == UPDATE_REQUEST)
+  {
+    // see if user supplied name on command line
+    // if not grab name from database
+    if (argc >= 3)
+    {
+      boost::filesystem::path absPath =
+        boost::filesystem::canonical(argv[optind]);
+      path = absPath.string();
+      db.query("DROP TABLE IF EXISTS ConfigTable;");
+      db.query("CREATE TABLE ConfigTable (path TEXT);");
+      db.query("INSERT INTO ConfigTable (path) VALUES (\"" + path + "\");");
+    }
+    else if (db.has_table("ConfigTable"))
+    {
+      path = get_path_from_database(db);
+      if (path.empty()) {
+        return 1;
+      }
+    }
+    else
+    {
+      cerr << "Error: Please specify a path to a file tree for updating\n"
+           << "       the database." << endl;
+      return 1;
+    }
+
+    // erase previous table and start a new one
+    // FIXME: In principle we could just update the entries here.
+    //        The question is if this is faster than just creating
+    //        it from scratch.
+    db.query("DROP TABLE IF EXISTS FileTable;");
+    db.query("CREATE TABLE FileTable "
              "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
              "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
   }
-
-  // generate absolute path
-  boost::filesystem::path absPath = boost::filesystem::canonical(path);
-
-  if (walk_path(absPath.string(), db, action) != 0) {
+  else if (action == CHECK_REQUEST)
+  {
+    // Check if we have a table. if not bail out, otherwise
+    // grab the path and go for it
+    if (db.has_table("ConfigTable")) {
+      path = get_path_from_database(db);
+    }
+    else
+    {
+      return 1;
+    }
+  }
+  else
+  {
+    // we should never end up here
+    assert(true);
+  }
+    
+  if (walk_path(path, db, action) != 0) {
     cout << "Error in walk_path" << endl;
     return 1;
   }
@@ -110,6 +164,30 @@ int main(int argc, char** argv) {
 }
 
 
+/*
+ * query the database for the filesystem path covered by
+ * the content.
+ */
+string get_path_from_database(DataBase& db) {
+
+  string path;
+  queryResult result = db.query("SELECT path FROM ConfigTable;");
+  if (result.size() != 1)
+  {
+    cerr << "Error: Trouble retrieving file path" << endl;
+    return path;
+  }
+
+  if (result[0].size() != 1)
+  {
+    cerr << "Error: Trouble retrieving file path" << endl;
+    return path;
+  }
+
+  return result[0][0];
+}
+
+    
 
 /* walk directory hierarchy starting at path */
 int walk_path(string path, DataBase& db, actionToggle requestType) {
@@ -179,9 +257,6 @@ int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
   if (!file) {
     return 1;
   }
-     db.query("CREATE TABLE IF NOT EXISTS FileTable "
-             "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
-             "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
      
   sha256Hash hash = hash_as_sha256(file);
   string hashString;
@@ -242,89 +317,5 @@ int check_file(const char *fpath,
   check_and_print_result(hashString, testResult, fileName, sb);
  
   return 0; 
-}
-
-
-  
-
-
-/*********************************************************************
- * 
- * member defitions for Database class
- * 
- ********************************************************************/
-DataBase::DataBase(string databaseName) :
-  db_(NULL),
-  success_(true) {
-
-  if (_open_database(databaseName) != 0) {
-    success_ = false;
-  }
-}
-
-DataBase::~DataBase() {
-  close();
-  sqlite3_shutdown();
-}
-
-
-/*
- * main workhorse - interacts with database
- */
-vector<vector<string>> DataBase::query(string query) {
-
-  // re-initialize success
-  success_ = true;
-    
-  sqlite3_stmt* statement;
-  vector<vector<string>> results;
-
-  if(sqlite3_prepare_v2(db_, query.c_str(), -1, &statement, 0)
-     == SQLITE_OK) {
-      
-    int cols = sqlite3_column_count(statement);
-    int result = 0;
-      
-    while(true) {
-      result = sqlite3_step(statement);
-
-      if(result == SQLITE_ROW) {
-        vector<string> values;
-        for(int col = 0; col < cols; col++) {
-          const char* content = reinterpret_cast<const char*>(
-            sqlite3_column_text(statement, col));
-          if (content) {
-            values.push_back(content);
-          }
-        }
-        results.push_back(values);
-      } else {
-        break;
-      }
-    }
-
-    sqlite3_finalize(statement);
-  }
-
-  string error = sqlite3_errmsg(db_);
-  if (error != "not an error") {
-    cout << query << " " << error << endl;
-    success_ = false;
-  }
-
-  return results;
-}
-
-  
-int DataBase::_open_database(string name) {
-  sqlite3_initialize();
-  int rc = sqlite3_open_v2(name.c_str(), &db_, SQLITE_OPEN_READWRITE |
-                           SQLITE_OPEN_CREATE, NULL);
-  if (rc != SQLITE_OK) {
-    sqlite3_close(db_);
-    return 1;
-  }
-
-  return 0;
 }
 

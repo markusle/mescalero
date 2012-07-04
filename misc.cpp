@@ -175,10 +175,12 @@ sha256Hash hash_as_sha256(ifstream &file) {
 /* sconcho usage information */
 void usage() {
 
-  cout << "usage: mescalero [options] path\n\n"
+  cout << "usage: mescalero [options] [path]\n\n"
        << "Possible arguments: \n"
-       << "    -c    check files under path \n"
-       << "    -u    update files under path \n\n"
+       << "    -c    check files\n"
+       << "    -u    update files. If no path is provided, the previously\n"
+       << "          used path will be used. If a path is provided it will\n"
+       << "          be used from now on.\n\n"
        << "Here path is the directory path under which to "
        << "check file properties"
        << "\n"
