@@ -21,7 +21,7 @@
 #ifndef DATABASE_HPP
 #define DATABASE_HPP
 
-#include <sqlite3.h>
+#include "sqlcipher.h"
 
 
 typedef std::vector<std::vector<std::string>> queryResult;
@@ -32,7 +32,7 @@ class DataBase {
 
 public:
 
-  DataBase(std::string databaseName, bool verbose);
+  DataBase(std::string databaseName, std::string password, bool verbose);
   ~DataBase(); 
   
   queryResult query(std::string query);
@@ -47,7 +47,7 @@ private:
   bool success_;
   bool verbose_;     // if set print error message for queries
 
-  int _open_database(std::string name);
+  int _open_database(std::string name, std::string password);
 };
 
 #endif

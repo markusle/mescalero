@@ -52,11 +52,13 @@ const std::string DATABASE_PATH = "test.db";
 const int COMMIT_INTERVAL = 20000;
 
 
-/* main entry point */
+/*
+ * main entry point
+ */
 int main(int argc, char** argv) {
 
   // parse command line
-  if (argc <= 1)
+  if (argc <= 2)
   {
     usage();
     return 1;
@@ -96,7 +98,7 @@ int main(int argc, char** argv) {
   }
 
   // open database
-  DataBase db(DATABASE_PATH, true);
+  DataBase db(DATABASE_PATH, argv[2], true);
   if (!db.success())
   {
     cerr << "Failed to open database" << endl;
@@ -118,10 +120,10 @@ int main(int argc, char** argv) {
   {
     // see if user supplied name on command line
     // if not grab name from database
-    if (argc >= 3)
+    if (argc >= 4)
     {
       boost::filesystem::path absPath =
-        boost::filesystem::canonical(argv[optind]);
+        boost::filesystem::canonical(argv[3]);
       path = absPath.string();
       db.query("DROP TABLE IF EXISTS ConfigTable;");
       db.query("CREATE TABLE ConfigTable (path TEXT);");

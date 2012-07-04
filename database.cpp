@@ -20,7 +20,7 @@
 
 
 #include <iostream>
-#include <sqlite3.h>
+#include <sqlcipher.h>
 #include <string>
 #include <vector>
 
@@ -37,12 +37,12 @@ using std::vector;
  * public interface
  * 
  *********************************************************************/
-DataBase::DataBase(string databaseName, bool verbose) :
+DataBase::DataBase(string databaseName, string password, bool verbose) :
   db_(NULL),
   success_(true),
   verbose_(verbose) {
 
-  if (_open_database(databaseName) != 0) {
+  if (_open_database(databaseName, password) != 0) {
     success_ = false;
   }
 }
@@ -127,12 +127,19 @@ bool DataBase::has_table(string tableName) {
 /*
  * open database; return 0 on success and 1 on failure
  */
-int DataBase::_open_database(string name) {
+int DataBase::_open_database(string name, string password) {
   sqlite3_initialize();
   int rc = sqlite3_open_v2(name.c_str(), &db_, SQLITE_OPEN_READWRITE |
                            SQLITE_OPEN_CREATE, NULL);
-  if (rc != SQLITE_OK) {
+  if (rc != SQLITE_OK) 
+  {
     sqlite3_close(db_);
+    return 1;
+  }
+
+  if (sqlite3_key(db_, reinterpret_cast<const void*>(password.c_str()), 
+        password.size()) != SQLITE_OK) 
+  {
     return 1;
   }
 
