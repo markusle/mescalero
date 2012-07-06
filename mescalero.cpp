@@ -81,22 +81,7 @@ int main(int argc, char** argv) {
   vector<string> paths;
   if (options.action == UPDATE_PATH_REQUEST) 
   {
-    db.query("DROP TABLE IF EXISTS ConfigTable;");
-    db.query("CREATE TABLE ConfigTable (path TEXT);");
-    db.query("BEGIN IMMEDIATE TRANSACTION");
-    
-    for (string& path : options.pathList) 
-    {
-      boost::filesystem::path absPath = boost::filesystem::canonical(path);
-      db.query("INSERT INTO ConfigTable (path) VALUES (\"" 
-          + absPath.string() + "\");");
-    }
-
-    db.query("COMMIT TRANSACTION");
-    if (!db.success()) {
-      db.query("ROLLBACK TRANSACTION");
-    }
-    
+    update_paths(db, options.pathList);
     return 0;
   }
   else
@@ -123,22 +108,8 @@ int main(int argc, char** argv) {
   }
   else if (options.action == UPDATE_FILE_REQUEST)
   {
-    // erase previous table and start a new one
-    // FIXME: In principle we could just update the entries here.
-    //        The question is if this is faster than just creating
-    //        it from scratch.
-    db.query("DROP TABLE IF EXISTS FileTable;");
-    db.query("CREATE TABLE FileTable "
-             "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
-             "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
-
-    for (string &path : paths) 
-    {
-      if (walk_path(path, db, options.action) != 0) 
-      {
-        err_msg("Error occured in walk_path");
-        return 1;
-      }
+    if (update_file_properties(db, paths) != 0) {
+      return 1;
     }
   }
   else if (options.action == CHECK_REQUEST)
@@ -407,4 +378,61 @@ int check_file(std::vector<std::string> referenceValues)
  
   return 0; 
 }
+
+
+
+/*
+ * update the scanning paths with the supplied values 
+ */
+int update_paths(DataBase& db, 
+                 const vector<string>& paths) 
+{
+  db.query("DROP TABLE IF EXISTS ConfigTable;");
+  db.query("CREATE TABLE ConfigTable (path TEXT);");
+  db.query("BEGIN IMMEDIATE TRANSACTION");
+  
+  for (const string& path : paths) 
+  {
+    boost::filesystem::path absPath = boost::filesystem::canonical(path);
+    db.query("INSERT INTO ConfigTable (path) VALUES (\"" 
+        + absPath.string() + "\");");
+  }
+
+  db.query("COMMIT TRANSACTION");
+  if (!db.success()) {
+    db.query("ROLLBACK TRANSACTION");
+  }
+
+  return 0;
+}
+
+
+/*
+ * update properties of all files under path
+ * 
+ * FIXME: In principle we could just update the entries here.
+ * The question is if this is faster than just creating
+ * them from scratch.
+ */
+int update_file_properties(DataBase& db,
+                           const vector<string>& paths)
+{
+  db.query("DROP TABLE IF EXISTS FileTable;");
+  db.query("CREATE TABLE FileTable "
+            "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
+            "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
+
+  for (const string& path : paths) 
+  {
+    if (walk_path(path, db, UPDATE_FILE_REQUEST) != 0) 
+    {
+      err_msg("Error occured in walk_path");
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+
 

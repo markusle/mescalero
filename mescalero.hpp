@@ -33,16 +33,16 @@ const std::string VERSION = "0.1";
 /* function declarations */
 
 int get_paths_from_database(DataBase& db,
-                            std::vector<std::string> &paths);
+                            std::vector<std::string>& paths);
 
-int update_file(const char *fpath,
-                const struct stat *sb,
-                DataBase &db);
+int update_file(const char* fpath,
+                const struct stat* sb,
+                DataBase& db);
 
 int check_file(std::vector<std::string> referenceValues);
 
 int walk_path(std::string path,
-              DataBase &db,
+              DataBase& db,
               actionToggle requestType);
 
 int walk_path_to_update(FTS* fileTree,
@@ -52,5 +52,12 @@ int walk_path_to_check(FTS* fileTree,
                        DataBase& db);
 
 int check_database_against_fs(DataBase& db);
+
+int update_paths(DataBase& db, 
+                 const std::vector<std::string>& paths);
+
+int update_file_properties(DataBase& db,
+                           const std::vector<std::string>& paths);
+
 
 #endif
