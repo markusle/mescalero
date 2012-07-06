@@ -21,6 +21,10 @@
 #ifndef MISC_HPP
 #define MISC_HPP
 
+#include <memory>
+#include <sstream>
+#include <string>
+
 /* typedefs */
 typedef std::shared_ptr<std::vector<unsigned char>> sha256Hash;
 

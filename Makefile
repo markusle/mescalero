@@ -8,7 +8,7 @@ includes = $(wildcard ./*.hpp)
 
 all: mescalero
 
-mescalero: database.o mescalero.o misc.o 
+mescalero: cmdlineParser.o database.o mescalero.o misc.o 
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(CRYPTO_SQLITE)
 
 .cpp.o: ${includes}

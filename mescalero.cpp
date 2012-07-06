@@ -22,7 +22,6 @@
 #include <boost/filesystem.hpp>
 #include <cstdio>
 #include <fstream>
-#include <fts.h>
 #include <iostream>
 #include <openssl/sha.h>
 #include <sstream>
@@ -33,7 +32,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "database.hpp"
+#include "cmdlineParser.hpp"
 #include "mescalero.hpp"
 #include "misc.hpp"
 
@@ -45,11 +44,14 @@ using std::ifstream;
 using std::unordered_set;
 using std::vector;
 
+
+
 /* hardcoded path to database for now */
-const std::string DATABASE_PATH = "test.db";
+const string DATABASE_PATH = "test.db";
 
 /* intervall at which transactions are committed */
 const int COMMIT_INTERVAL = 20000;
+
 
 
 /*
@@ -57,79 +59,70 @@ const int COMMIT_INTERVAL = 20000;
  */
 int main(int argc, char** argv) {
 
-  // parse command line
-  if (argc <= 2)
+  cmdLineOpts options;
+  if (parse_commandline(argc, argv, options) != 0) 
   {
-    usage();
-    return 1;
-  }
-
-  // check command line arguments
-  actionToggle action = NONE;
-  int c;
-  while ((c = getopt(argc,argv, "uc") ) != -1 )
-  {
-    switch (c)
-    {
-        case 'u':
-          action = UPDATE_REQUEST;
-          break;
-        case 'c':
-          action = CHECK_REQUEST;
-          break;
-        case '?':
-          usage();
-          break;
-        case ':':
-          usage();
-          break;
-        default:
-          usage();
-          break;
-    }
-  }
-
-  // make sure user specified one of u or c
-  if (action == NONE)
-  {
-    err_msg("Please specify at least on of -u or -c");
-    usage();
     return 1;
   }
 
   // open database
-  DataBase db(DATABASE_PATH, argv[2], true);
+  DataBase db(DATABASE_PATH, options.password, true);
   if (!db.success())
   {
     cerr << "Failed to open database" << endl;
     return 1;
   }
+  
+  // nuke password from memory
+  options.password.clear();
 
-  // grab path to use for updating and checking
-  // if one exists
-  std::string path;
-  if (db.has_table("ConfigTable"))
+  // update paths to be check if requested or grab them from
+  // the database
+  vector<string> paths;
+  if (options.action == UPDATE_PATH_REQUEST) 
   {
-    path = get_path_from_database(db);
-    if (path.empty()) {
-      return 1;
+    db.query("DROP TABLE IF EXISTS ConfigTable;");
+    db.query("CREATE TABLE ConfigTable (path TEXT);");
+    db.query("BEGIN IMMEDIATE TRANSACTION");
+    
+    for (string& path : options.pathList) 
+    {
+      boost::filesystem::path absPath = boost::filesystem::canonical(path);
+      db.query("INSERT INTO ConfigTable (path) VALUES (\"" 
+          + absPath.string() + "\");");
+    }
+
+    db.query("COMMIT TRANSACTION");
+    if (!db.success()) {
+      db.query("ROLLBACK TRANSACTION");
+    }
+    
+    return 0;
+  }
+  else
+  {
+    if (db.has_table("ConfigTable"))
+    {
+      if (get_paths_from_database(db, paths) != 0) 
+      {
+        err_msg("Database does not contain path for scanning.");
+        return 1;
+      }
     }
   }
- 
-  if (action == UPDATE_REQUEST)
-  {
-    // see if user supplied name on command line
-    // if not grab name from database
-    if (argc >= 4)
+
+  if (options.action == LIST_PATH_REQUEST) {
+    cout << "Currently active paths: \n\n";
+
+    for (string& val : paths) 
     {
-      boost::filesystem::path absPath =
-        boost::filesystem::canonical(argv[3]);
-      path = absPath.string();
-      db.query("DROP TABLE IF EXISTS ConfigTable;");
-      db.query("CREATE TABLE ConfigTable (path TEXT);");
-      db.query("INSERT INTO ConfigTable (path) VALUES (\"" + path + "\");");
+      cout << val << endl;
     }
 
+    cout << endl;
+  }
+  else if (options.action == UPDATE_FILE_REQUEST)
+  {
     // erase previous table and start a new one
     // FIXME: In principle we could just update the entries here.
     //        The question is if this is faster than just creating
@@ -139,38 +132,27 @@ int main(int argc, char** argv) {
              "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
              "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
 
-    // if we don't have a path at this point the user should have
-    // specified one
-    if (path.empty())
+    for (string &path : paths) 
     {
-      err_msg("Please specify a path to a file tree for updating\n"
-              "       the database.");
-      return 1;
-    }
-
-    if (walk_path(path, db, action) != 0) {
-      err_msg("Error occured in walk_path");
-      return 1;
+      if (walk_path(path, db, options.action) != 0) 
+      {
+        err_msg("Error occured in walk_path");
+        return 1;
+      }
     }
   }
-  else if (action == CHECK_REQUEST)
+  else if (options.action == CHECK_REQUEST)
   {
-    // if we don't have a path at this point the user should have
-    // specified one
-    if (path.empty())
-    {
-      err_msg("Please specify a path to a file tree for updating\n"
-              "the database");
-      return 1;
-    }
-
     // check properties of all known files
     check_database_against_fs(db);
     
     // check if any files present are not in database
-    if (walk_path(path, db, action) != 0) {
-      cout << "Error in walk_path" << endl;
-      return 1;
+    for (string &path : paths) 
+    {
+      if (walk_path(path, db, options.action) != 0) {
+        cout << "Error in walk_path" << endl;
+        return 1;
+      }
     }
   }
 
@@ -207,24 +189,28 @@ int check_database_against_fs(DataBase& db)
  * query the database for the filesystem path covered by
  * the content.
  */
-string get_path_from_database(DataBase& db)
+int get_paths_from_database(DataBase& db, vector<string> &paths)
 {
 
-  string path;
   queryResult result = db.query("SELECT path FROM ConfigTable;");
-  if (result.size() != 1)
+  /*if (result.size() != 1)
   {
     err_msg("Trouble retrieving file path");
     return path;
-  }
+  }*/
 
-  if (result[0].size() != 1)
+  for (vector<string>& val : result) 
   {
-    err_msg("Trouble retrieving file path");
-    return path;
+    if (val.size() != 1)
+    {
+      err_msg("Trouble retrieving file path");
+      return 1;
+    }
+
+    paths.push_back(val[0]);
   }
 
-  return result[0][0];
+  return 0;
 }
 
     
@@ -247,7 +233,7 @@ int walk_path(string path, DataBase& db, actionToggle requestType) {
   }
 
   // walk tree depending on request
-  if (requestType == UPDATE_REQUEST)
+  if (requestType == UPDATE_FILE_REQUEST)
   {
     if (walk_path_to_update(fileTree, db) != 0)
     {

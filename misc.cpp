@@ -20,15 +20,13 @@
 
 #include <iostream>
 #include <fstream>
-#include <memory>
-#include <string>
-#include <sstream>
 #include <cstdio>
 #include <sys/stat.h>
 #include <vector>
 #include <openssl/sha.h>
 
 #include "misc.hpp"
+#include "mescalero.hpp"
 
 using std::cerr;
 using std::cout;
@@ -175,15 +173,17 @@ sha256Hash hash_as_sha256(ifstream &file) {
 /* sconcho usage information */
 void usage() {
 
-  cout << "usage: mescalero [options] [password] [path]\n\n"
-       << "Possible arguments: \n"
-       << "    -c    check files\n"
-       << "    -u    update files. If no path is provided, the previously\n"
-       << "          used path will be used. If a path is provided it will\n"
-       << "          be used from now on.\n\n"
-       << "Here path is the directory path under which to "
-       << "check file properties. Password is the password used"
-       << "for encrypting the database."
+  cout << "mescalero v " << VERSION << " (C) 2012 Markus Dittrich\n\n"
+       << "usage: mescalero -p password [options]\n\n"
+       << "Available options (at least one is required):\n\n"
+       << "\t-c\n"
+       << "\t   check file properties\n\n"
+       << "\t-u\n"
+       << "\t   update file properties\n\n"
+       << "\t-l\n"
+       << "\t   list the current set of file paths\n\n"
+       << "\t-f <list of file paths>\n"
+       << "\t   update file paths for file checking\n\n"
        << "\n"
        << endl;
 }

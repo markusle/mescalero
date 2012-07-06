@@ -18,39 +18,29 @@
  *
  */
 
-#ifndef MESCALERO_HPP
-#define MESCALERO_HPP
-
-#include <fts.h>
-
-#include "database.hpp"
-#include "cmdlineParser.hpp"
+#ifndef CMDLINEPARSER_HPP
+#define CMDLINEPARSER_HPP
 
 
-const std::string VERSION = "0.1";
+/* macros for type of request */
+enum actionToggle {NONE, 
+                   UPDATE_FILE_REQUEST, 
+                   CHECK_REQUEST,
+                   UPDATE_PATH_REQUEST,
+                   LIST_PATH_REQUEST};
+
+
+/* structure describing commandline options */
+struct cmdLineOpts {
+  std::string password;
+  actionToggle action;
+  std::vector<std::string> pathList;
+};
 
 
 /* function declarations */
+int parse_commandline(int argc, char **argv, cmdLineOpts &options);
 
-int get_paths_from_database(DataBase& db,
-                            std::vector<std::string> &paths);
 
-int update_file(const char *fpath,
-                const struct stat *sb,
-                DataBase &db);
-
-int check_file(std::vector<std::string> referenceValues);
-
-int walk_path(std::string path,
-              DataBase &db,
-              actionToggle requestType);
-
-int walk_path_to_update(FTS* fileTree,
-                        DataBase& db);
-
-int walk_path_to_check(FTS* fileTree,
-                       DataBase& db);
-
-int check_database_against_fs(DataBase& db);
 
 #endif
