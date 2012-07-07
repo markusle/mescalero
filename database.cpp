@@ -32,17 +32,17 @@ using std::string;
 using std::vector;
 
 
-/**********************************************************************
- * 
- * public interface
- * 
- *********************************************************************/
+////////////////////////////////////////////////////////////////////////
+// 
+// public interface
+// 
+////////////////////////////////////////////////////////////////////////
 DataBase::DataBase(string databaseName, string password, bool verbose) :
   db_(NULL),
   success_(true),
   verbose_(verbose) {
 
-  if (_open_database(databaseName, password) != 0) {
+  if (openDatabase_(databaseName, password) != 0) {
     success_ = false;
   }
 }
@@ -53,10 +53,10 @@ DataBase::~DataBase() {
 }
 
 
-/*
- * main workhorse - interacts with database
- */
-queryResult DataBase::query(string query) {
+//
+// main workhorse - interacts with database
+//
+QueryResult DataBase::query(string query) {
 
   // re-initialize success
   success_ = true;
@@ -101,33 +101,60 @@ queryResult DataBase::query(string query) {
 }
 
 
-/*
- * check if table exists in database; returns true on success
- * and false otherwise
- */ 
-bool DataBase::has_table(string tableName) {
 
+//
+// check if table exists in database; returns true on success
+// and false otherwise
+// 
+bool 
+DataBase::hasTable(string tableName) 
+{
   string checkQuery("SELECT 1 FROM ");
   checkQuery += tableName;
   checkQuery += ";";
 
-  queryResult result = query(checkQuery);
+  QueryResult result = query(checkQuery);
 
   return !result.empty();
+}
+
+
+
+//
+// function for checking if a database query was
+// successful
+//
+bool 
+DataBase::success() 
+{ 
+  return success_; 
+}
+
+
+
+//
+// close database
+//
+void 
+DataBase::close() 
+{ 
+  sqlite3_close(db_); 
 }
   
 
 
-/**********************************************************************
- * 
- * private interface
- * 
- *********************************************************************/
+///////////////////////////////////////////////////////////////////////
+//
+// private interface
+// 
+///////////////////////////////////////////////////////////////////////
 
-/*
- * open database; return 0 on success and 1 on failure
- */
-int DataBase::_open_database(string name, string password) {
+//
+// open database; return 0 on success and 1 on failure
+//
+int 
+DataBase::openDatabase_(string name, string password) 
+{
   sqlite3_initialize();
   int rc = sqlite3_open_v2(name.c_str(), &db_, SQLITE_OPEN_READWRITE |
                            SQLITE_OPEN_CREATE, NULL);

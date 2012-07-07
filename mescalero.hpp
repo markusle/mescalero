@@ -30,34 +30,34 @@
 const std::string VERSION = "0.1";
 
 
-/* function declarations */
+// function declarations 
 
-int get_paths_from_database(DataBase& db,
-                            std::vector<std::string>& paths);
+int getPathsFromDatabase(DataBase& db,
+                         std::vector<std::string>& paths);
 
-int update_file(const char* fpath,
-                const struct stat* sb,
-                DataBase& db);
+int updateFile(const char* fpath,
+               const struct stat* sb,
+               DataBase& db);
 
-int check_file(std::vector<std::string> referenceValues);
+int checkFile(std::vector<std::string> referenceValues);
 
-int walk_path(std::string path,
-              DataBase& db,
-              actionToggle requestType);
+int walkPath(std::string path,
+             DataBase& db,
+             actionToggle requestType);
 
-int walk_path_to_update(FTS* fileTree,
-                        DataBase& db);
+int walkPathToUpdate(FTS* fileTree,
+                     DataBase& db);
 
-int walk_path_to_check(FTS* fileTree,
-                       DataBase& db);
+int walkPathToCheck(FTS* fileTree,
+                    DataBase& db);
 
-int check_database_against_fs(DataBase& db);
+int checkDatabaseAgainstFs(DataBase& db);
 
-int update_paths(DataBase& db, 
-                 const std::vector<std::string>& paths);
+int updatePaths(DataBase& db, 
+                const std::vector<std::string>& paths);
 
-int update_file_properties(DataBase& db,
-                           const std::vector<std::string>& paths);
+int updateFileProperties(DataBase& db,
+                         const std::vector<std::string>& paths);
 
 
 #endif

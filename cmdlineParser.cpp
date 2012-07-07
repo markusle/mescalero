@@ -32,41 +32,39 @@ using std::string;
 using std::vector;
 
 
-/* 
- * function for checking for parsing and checking the provided
- * command line arguments.
- */
-int parse_commandline(int argc, char **argv, cmdLineOpts &options)
+//
+// function for checking for parsing and checking the provided
+// command line arguments.
+//
+int 
+parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
 {
   // we need at least a password and one specific request
-  if (argc < 4)
-  {
+  if (argc < 4) {
     usage();
     return 1;
   }
 
   // check command line arguments
-  options.action = NONE;
-  options.password = "";
+  cmdLineOpts.action = NONE;
+  cmdLineOpts.password = "";
   int c;
-  while ((c = getopt(argc,argv, "p:ucfl") ) != -1 )
-  {
-    switch (c)
-    {
+  while ((c = getopt(argc,argv, "p:ucfl") ) != -1 ) {
+    switch (c) {
         case 'u':
-          options.action = UPDATE_FILE_REQUEST;
+          cmdLineOpts.action = UPDATE_FILE_REQUEST;
           break;
         case 'c':
-          options.action = CHECK_REQUEST;
+          cmdLineOpts.action = CHECK_REQUEST;
           break;
         case 'l':
-          options.action = LIST_PATH_REQUEST;
+          cmdLineOpts.action = LIST_PATH_REQUEST;
           break;
         case 'f':
-          options.action = UPDATE_PATH_REQUEST;
+          cmdLineOpts.action = UPDATE_PATH_REQUEST;
           break;
         case 'p':
-          options.password = string(optarg);
+          cmdLineOpts.password = string(optarg);
           break;
         case '?':
           usage();
@@ -81,31 +79,27 @@ int parse_commandline(int argc, char **argv, cmdLineOpts &options)
   }
 
   // make sure user specified one of u or c
-  if (options.action == NONE)
-  {
-    err_msg("Please specify at least one option!");
+  if (cmdLineOpts.action == NONE) {
+    errMsg("Please specify at least one option!");
     usage();
     return 1;
   }
 
-  if (options.password.empty()) 
-  {
-    err_msg("You must provide a password for encrypting the database.");
+  if (cmdLineOpts.password.empty()) {
+    errMsg("You must provide a password for encrypting the database.");
     usage();
     return 1;
   }
 
   // grab list of paths if requested
-  if (options.action == UPDATE_PATH_REQUEST) 
-  {
+  if (cmdLineOpts.action == UPDATE_PATH_REQUEST) {
     // need at least one path
     if (optind == argc) {
       return 1;
     }
 
-    for (int i=optind; i<argc; ++i) 
-    {
-      options.pathList.push_back(string(argv[i]));
+    for (int i=optind; i<argc; ++i) {
+      cmdLineOpts.pathList.push_back(string(argv[i]));
     }
   }
 

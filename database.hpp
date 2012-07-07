@@ -24,10 +24,10 @@
 #include "sqlcipher.h"
 
 
-typedef std::vector<std::vector<std::string>> queryResult;
+typedef std::vector<std::vector<std::string>> QueryResult;
 
 
-/* lightweight wrapper around sqlite3 database */
+// lightweight wrapper around sqlite3 database 
 class DataBase {
 
 public:
@@ -35,11 +35,11 @@ public:
   DataBase(std::string databaseName, std::string password, bool verbose);
   ~DataBase(); 
   
-  queryResult query(std::string query);
+  QueryResult query(std::string query);
   
-  bool success() { return success_; }
-  bool has_table(std::string tableName); 
-  void close() { sqlite3_close(db_); }
+  bool success();
+  bool hasTable(std::string tableName); 
+  void close();
 
 private:
 
@@ -47,7 +47,7 @@ private:
   bool success_;
   bool verbose_;     // if set print error message for queries
 
-  int _open_database(std::string name, std::string password);
+  int openDatabase_(std::string name, std::string password);
 };
 
 #endif

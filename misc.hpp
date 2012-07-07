@@ -25,35 +25,37 @@
 #include <sstream>
 #include <string>
 
-/* typedefs */
-typedef std::shared_ptr<std::vector<unsigned char>> sha256Hash;
 
-/* function declarations */
-void err_msg(std::string message);
+// typedefs 
+typedef std::shared_ptr<std::vector<unsigned char>> Sha256Hash;
 
-sha256Hash hash_as_sha256(std::ifstream &filename);
 
-void hash_to_string(sha256Hash hash,
-                    std::string &hashString);
+// function declarations 
+void errMsg(std::string message);
 
-void print_hash(std::string fileName,
-                sha256Hash hash);
+Sha256Hash hashAsSha256(std::ifstream& filename);
 
-void check_and_print_result(std::string &hashString,
-                            std::vector<std::string> queryResult,
-                            std::string fileName,
-                            const struct stat *sb); 
+void hashToString(const Sha256Hash& sha256Hash,
+                  std::string& hashString);
 
-void result_formatter(const std::string &name,
-                      const std::string &found,
-                      const std::string &expected,
-                      std::string &result);
+void printHash(std::string& fileName,
+               Sha256Hash& sha256Hash);
+
+void checkAndPrintResult(const std::string& hashString,
+                         const std::vector<std::string>& queryResult,
+                         const std::string& fileName,
+                         const struct stat* sb); 
+
+void resultFormatter(const std::string& name,
+                     const std::string& found,
+                     const std::string& expected,
+                     std::string& result);
 
 
 void usage();
 
 
-/* simple template helper to convert stat types to string */
+// simple template helper to convert stat types to string 
 template <typename T> std::string to_string(T inValue) {
   std::ostringstream converter;
   converter << inValue;

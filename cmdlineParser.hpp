@@ -22,7 +22,7 @@
 #define CMDLINEPARSER_HPP
 
 
-/* macros for type of request */
+// macros for type of request 
 enum actionToggle {NONE, 
                    UPDATE_FILE_REQUEST, 
                    CHECK_REQUEST,
@@ -30,16 +30,17 @@ enum actionToggle {NONE,
                    LIST_PATH_REQUEST};
 
 
-/* structure describing commandline options */
-struct cmdLineOpts {
+
+// structure describing commandline options 
+struct CmdLineOpts {
   std::string password;
   actionToggle action;
   std::vector<std::string> pathList;
 };
 
 
-/* function declarations */
-int parse_commandline(int argc, char **argv, cmdLineOpts &options);
+// function declarations
+int parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts);
 
 
 

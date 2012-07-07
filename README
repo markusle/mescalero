@@ -1,5 +1,9 @@
-WARNING: mescalero is completely experimental at this point and not
-even supposed to work.
+WARNING: mescalero is still experimental -- use at your own risk ;)
 
 mescalero requires the use of the encrypted slite3 backend provided
 by Sqlcipher <http://sqlcipher.net>.
+
+The coding conventions follow more or less what is suggested at
+<http://geosoft.no/development/cppstyle.html>.
+
+

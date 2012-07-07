@@ -46,29 +46,28 @@ using std::vector;
 
 
 
-/* hardcoded path to database for now */
+// hardcoded path to database for now 
 const string DATABASE_PATH = "test.db";
 
-/* intervall at which transactions are committed */
+// intervall at which transactions are committed */
 const int COMMIT_INTERVAL = 20000;
 
 
 
-/*
- * main entry point
- */
-int main(int argc, char** argv) {
-
-  cmdLineOpts options;
-  if (parse_commandline(argc, argv, options) != 0) 
-  {
+//
+// main entry point
+//
+int 
+main(int argc, char** argv) 
+{
+  CmdLineOpts options;
+  if (parseCommandline(argc, argv, options) != 0) {
     return 1;
   }
 
   // open database
   DataBase db(DATABASE_PATH, options.password, true);
-  if (!db.success())
-  {
+  if (!db.success()) {
     cerr << "Failed to open database" << endl;
     return 1;
   }
@@ -79,18 +78,14 @@ int main(int argc, char** argv) {
   // update paths to be check if requested or grab them from
   // the database
   vector<string> paths;
-  if (options.action == UPDATE_PATH_REQUEST) 
-  {
-    update_paths(db, options.pathList);
+  if (options.action == UPDATE_PATH_REQUEST) {
+    updatePaths(db, options.pathList);
     return 0;
-  }
-  else
-  {
-    if (db.has_table("ConfigTable"))
-    {
-      if (get_paths_from_database(db, paths) != 0) 
-      {
-        err_msg("Database does not contain path for scanning.");
+  } 
+  else {
+    if (db.hasTable("ConfigTable")) {
+      if (getPathsFromDatabase(db, paths) != 0) {
+        errMsg("Database does not contain path for scanning.");
         return 1;
       }
     }
@@ -99,29 +94,25 @@ int main(int argc, char** argv) {
   if (options.action == LIST_PATH_REQUEST) {
     cout << "Currently active paths: \n\n";
 
-    for (string& val : paths) 
-    {
+    for (string& val : paths) {
       cout << val << endl;
     }
 
     cout << endl;
   }
-  else if (options.action == UPDATE_FILE_REQUEST)
-  {
-    if (update_file_properties(db, paths) != 0) {
+  else if (options.action == UPDATE_FILE_REQUEST) {
+    if (updateFileProperties(db, paths) != 0) {
       return 1;
     }
   }
-  else if (options.action == CHECK_REQUEST)
-  {
+  else if (options.action == CHECK_REQUEST) {
     // check properties of all known files
-    check_database_against_fs(db);
+    checkDatabaseAgainstFs(db);
     
     // check if any files present are not in database
-    for (string &path : paths) 
-    {
-      if (walk_path(path, db, options.action) != 0) {
-        cout << "Error in walk_path" << endl;
+    for (string &path : paths) {
+      if (walkPath(path, db, options.action) != 0) {
+        cout << "Error in walkPath" << endl;
         return 1;
       }
     }
@@ -131,22 +122,22 @@ int main(int argc, char** argv) {
 }
 
 
-/*
- * this function goes through all entries in the database
- * and compares them with the current content of the database
- *
- */
-int check_database_against_fs(DataBase& db)
+
+//
+// this function goes through all entries in the database
+// and compares them with the current content of the database
+//
+int 
+checkDatabaseAgainstFs(DataBase& db)
 {
-  queryResult results(db.query("SELECT * from FileTable"));
+  QueryResult results(db.query("SELECT * from FileTable"));
   for (vector<string>& result : results) {
     
     if (result.size() != 8) {
-      err_msg("incomplete query from database. ");
+      errMsg("incomplete query from database. ");
     }
 
-    if (check_file(result) != 0)
-    {
+    if (checkFile(result) != 0) {
       cout << "Warning: " << result[0] << " has disappeared. \n" << endl;
     }
   }
@@ -156,25 +147,19 @@ int check_database_against_fs(DataBase& db)
 
 
 
-/*
- * query the database for the filesystem path covered by
- * the content.
- */
-int get_paths_from_database(DataBase& db, vector<string> &paths)
+//
+// query the database for the filesystem path covered by
+// the content.
+//
+int 
+getPathsFromDatabase(DataBase& db, vector<string> &paths)
 {
 
-  queryResult result = db.query("SELECT path FROM ConfigTable;");
-  /*if (result.size() != 1)
-  {
-    err_msg("Trouble retrieving file path");
-    return path;
-  }*/
-
-  for (vector<string>& val : result) 
-  {
-    if (val.size() != 1)
-    {
-      err_msg("Trouble retrieving file path");
+  QueryResult result(db.query("SELECT path FROM ConfigTable;"));
+  
+  for (vector<string>& val : result) {
+    if (val.size() != 1) {
+      errMsg("Trouble retrieving file path");
       return 1;
     }
 
@@ -186,9 +171,12 @@ int get_paths_from_database(DataBase& db, vector<string> &paths)
 
     
 
-/* walk directory hierarchy starting at path */
-int walk_path(string path, DataBase& db, actionToggle requestType) {
-
+//
+// walk directory hierarchy starting at path 
+//
+int 
+walkPath(string path, DataBase& db, actionToggle requestType) 
+{
   FTS* fileTree;
   char* paths[] = {(char*)path.c_str(), NULL};
 
@@ -199,35 +187,29 @@ int walk_path(string path, DataBase& db, actionToggle requestType) {
 
   fileTree = fts_open(paths, options, NULL);
   if (fileTree == NULL) {
-    err_msg("fts_open failed");
+    errMsg("fts_open failed");
     return 1;
   }
 
   // walk tree depending on request
-  if (requestType == UPDATE_FILE_REQUEST)
-  {
-    if (walk_path_to_update(fileTree, db) != 0)
-    {
+  if (requestType == UPDATE_FILE_REQUEST) {
+    if (walkPathToUpdate(fileTree, db) != 0) {
       return 1;
     }
   }
-  else if (requestType == CHECK_REQUEST)
-  {
-   if (walk_path_to_check(fileTree, db) != 0)
-    {
+  else if (requestType == CHECK_REQUEST) {
+   if (walkPathToCheck(fileTree, db) != 0) {
       return 1;
     }
   }
 
-  if (errno != 0)
-  {
-    err_msg("fts_read failed");
+  if (errno != 0) {
+    errMsg("fts_read failed");
     return 1;
   }
 
-  if (fts_close(fileTree) < 0)
-  {
-    err_msg("fts_read failed");
+  if (fts_close(fileTree) < 0) {
+    errMsg("fts_read failed");
     return 1;
   }
 
@@ -235,10 +217,12 @@ int walk_path(string path, DataBase& db, actionToggle requestType) {
 }
   
 
-/*
- * walk file tree given by FTS and update the database
- */
-int walk_path_to_update(FTS* fileTree, DataBase& db)
+
+//
+// walk file tree given by FTS and update the database
+//
+int 
+walkPathToUpdate(FTS* fileTree, DataBase& db)
 {
   // begin transaction
   db.query("BEGIN IMMEDIATE TRANSACTION");
@@ -266,14 +250,13 @@ int walk_path_to_update(FTS* fileTree, DataBase& db)
     }
         
     if (file->fts_info == FTS_F) {
-      update_file(file->fts_accpath, file->fts_statp, db);
+      updateFile(file->fts_accpath, file->fts_statp, db);
     }
   }
 
   // end transaction - if it fails roll it back
   db.query("COMMIT TRANSACTION");
-  if (!db.success())
-  {
+  if (!db.success()) {
     db.query("ROLLBACK TRANSACTION");
   }
 
@@ -282,20 +265,21 @@ int walk_path_to_update(FTS* fileTree, DataBase& db)
 
 
 
-/*
- * walk file tree given by FTS and check if any
- * entries are not in database
- *
- * NOTE: It is very inefficient to walk through
- * the database entry by entry. Instead we dump
- * the whole content (filenames only) into an
- * unordered_set and look through it.
- */
-int walk_path_to_check(FTS* fileTree, DataBase& db)
+//
+// walk file tree given by FTS and check if any
+// entries are not in database
+//
+// NOTE: It is very inefficient to walk through
+// the database entry by entry. Instead we dump
+// the whole content (filenames only) into an
+// unordered_set and look through it.
+//
+int 
+walkPathToCheck(FTS* fileTree, DataBase& db)
 {
   FTSENT* file;
 
-  queryResult result(db.query("SELECT * FROM FileTable;"));
+  QueryResult result(db.query("SELECT * FROM FileTable;"));
   unordered_set<string> allFiles;
   for(vector<string>& item : result) {
     if (item.size() != 8) {
@@ -305,12 +289,9 @@ int walk_path_to_check(FTS* fileTree, DataBase& db)
     allFiles.emplace(item[0]);
   }
 
-  while ((file = fts_read(fileTree)))
-  {
-    if (file->fts_info == FTS_F)
-    {
-      if (allFiles.find(file->fts_accpath) == allFiles.end())
-      {
+  while ((file = fts_read(fileTree))) {
+    if (file->fts_info == FTS_F) {
+      if (allFiles.find(file->fts_accpath) == allFiles.end()) {
         cerr << "Warning: " << file->fts_accpath << " not in database\n"
              << endl;
       }
@@ -322,19 +303,22 @@ int walk_path_to_check(FTS* fileTree, DataBase& db)
 
 
 
-/* process each file in the filetree walk and update its information
- * in the database */
-int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
-
+//
+// process each file in the filetree walk and update its information
+// in the database 
+//
+int 
+updateFile(const char *fpath, const struct stat *sb, DataBase &db) 
+{
   string fileName(fpath);
   ifstream file(fileName);
   if (!file) {
     return 1;
   }
      
-  sha256Hash hash = hash_as_sha256(file);
+  Sha256Hash hash = hashAsSha256(file);
   string hashString;
-  hash_to_string(hash, hashString);
+  hashToString(hash, hashString);
 
   std::ostringstream request;
   request << "INSERT INTO FileTable (name, hash, uid, gid, mode, "
@@ -349,11 +333,13 @@ int update_file(const char *fpath, const struct stat *sb, DataBase &db) {
 }
 
 
-/*
- * compare reference file properties against the current values on
- * the file system
- */
-int check_file(std::vector<std::string> referenceValues)
+
+//
+// compare reference file properties against the current values on
+// the file system
+//
+int 
+checkFile(std::vector<std::string> referenceValues)
 {
   string fileName = referenceValues[0];
   
@@ -363,9 +349,9 @@ int check_file(std::vector<std::string> referenceValues)
     return 1;
   }
   
-  sha256Hash hash = hash_as_sha256(file);
+  Sha256Hash hash = hashAsSha256(file);
   string hashString;
-  hash_to_string(hash, hashString);
+  hashToString(hash, hashString);
 
   // stat the file
   struct stat sb;
@@ -374,25 +360,24 @@ int check_file(std::vector<std::string> referenceValues)
   }
   
   // all checks out now look at the result and print error if needed
-  check_and_print_result(hashString, referenceValues, fileName, &sb);
+  checkAndPrintResult(hashString, referenceValues, fileName, &sb);
  
   return 0; 
 }
 
 
 
-/*
- * update the scanning paths with the supplied values 
- */
-int update_paths(DataBase& db, 
-                 const vector<string>& paths) 
+//
+// update the scanning paths with the supplied values 
+//
+int 
+updatePaths(DataBase& db, const vector<string>& paths) 
 {
   db.query("DROP TABLE IF EXISTS ConfigTable;");
   db.query("CREATE TABLE ConfigTable (path TEXT);");
   db.query("BEGIN IMMEDIATE TRANSACTION");
   
-  for (const string& path : paths) 
-  {
+  for (const string& path : paths) {
     boost::filesystem::path absPath = boost::filesystem::canonical(path);
     db.query("INSERT INTO ConfigTable (path) VALUES (\"" 
         + absPath.string() + "\");");
@@ -407,32 +392,29 @@ int update_paths(DataBase& db,
 }
 
 
-/*
- * update properties of all files under path
- * 
- * FIXME: In principle we could just update the entries here.
- * The question is if this is faster than just creating
- * them from scratch.
- */
-int update_file_properties(DataBase& db,
-                           const vector<string>& paths)
+
+//
+// update properties of all files under path
+// 
+// FIXME: In principle we could just update the entries here.
+// The question is if this is faster than just creating
+// them from scratch.
+//
+int 
+updateFileProperties(DataBase& db, const vector<string>& paths)
 {
   db.query("DROP TABLE IF EXISTS FileTable;");
   db.query("CREATE TABLE FileTable "
             "(name TEXT, hash TEXT, uid TEXT, gid TEXT, "
             "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
 
-  for (const string& path : paths) 
-  {
-    if (walk_path(path, db, UPDATE_FILE_REQUEST) != 0) 
-    {
-      err_msg("Error occured in walk_path");
+  for (const string& path : paths) {
+    if (walkPath(path, db, UPDATE_FILE_REQUEST) != 0) {
+      errMsg("Error occured in walkPath");
       return 1;
     }
   }
 
   return 0;
 }
-
-
 

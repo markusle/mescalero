@@ -18,6 +18,7 @@
  *
  */
 
+
 #include <iostream>
 #include <fstream>
 #include <cstdio>
@@ -37,18 +38,26 @@ using std::ifstream;
 using std::shared_ptr;
 
 
-/* error reporting function */
-void err_msg(std::string message) {
+
+//
+// error reporting function 
+//
+void 
+errMsg(std::string message) 
+{
   cerr << "Error: " << message << endl;
 }
 
 
-/* helper function to print out a file's hash */
-void print_hash(string fileName,
-                sha256Hash hash) {
 
+//
+// helper function to print out a file's hash 
+//
+void 
+printHash(const string& fileName, const Sha256Hash& sha256Hash) 
+{
   cout << fileName << ":  ";
-  for (unsigned char &item : *hash) {
+  for (const unsigned char& item : *sha256Hash) {
     printf("%02x", item);
   }
     
@@ -56,69 +65,76 @@ void print_hash(string fileName,
 }
 
 
-/* convert a sha256Hash type into a string represenation */
-void hash_to_string(sha256Hash hash, string& hashString) {
 
+//
+// convert a Sha256Hash type into a string represenation 
+//
+void 
+hashToString(const Sha256Hash& sha256Hash, string& hashString) 
+{
   hashString.clear();
 
   char c[3];
-  for (unsigned char &item : *hash) {
+  for (const unsigned char& item : *sha256Hash) {
     sprintf(c, "%02x", item);
     hashString += c;
   }
 }
 
 
-/* check current file status against what we have stored
- * in the database and complain if there's mismatch */
-void check_and_print_result(string &hashString,
-                            vector<std::string> queryResult,
-                            string fileName,
-                            const struct stat *sb) {
 
+//
+// check current file status against what we have stored
+// in the database and complain if there's mismatch 
+//
+void 
+checkAndPrintResult(const string& hashString, 
+                    const vector<std::string>& result,
+                    const string& fileName, const struct stat *sb) 
+{
   bool status = false;
   string m;
-  if (queryResult[1] != hashString) {
+  if (result[1] != hashString) {
     status = true;
     m += "hash mismatch :: \n";
     m = m + "(F) " + hashString + "\n";
-    m = m + "(E) " + queryResult[1] + "\n";
+    m = m + "(E) " + result[1] + "\n";
   }
 
-  if (queryResult[2] != to_string(sb->st_uid) ) {
+  if (result[2] != to_string(sb->st_uid) ) {
     status = true;
-    result_formatter("uid", to_string(sb->st_uid),
-                     queryResult[2], m);
+    resultFormatter("uid", to_string(sb->st_uid),
+                     result[2], m);
   }
 
-  if (queryResult[3] != to_string(sb->st_gid) ) {
+  if (result[3] != to_string(sb->st_gid) ) {
     status = true;
-    result_formatter("gid", to_string(sb->st_gid),
-                     queryResult[3], m);
+    resultFormatter("gid", to_string(sb->st_gid),
+                     result[3], m);
   }
 
-  if (queryResult[4] != to_string(sb->st_mode) ) {
+  if (result[4] != to_string(sb->st_mode) ) {
     status = true;
-    result_formatter("mode", to_string(sb->st_mode),
-                     queryResult[4], m);
+    resultFormatter("mode", to_string(sb->st_mode),
+                     result[4], m);
   }
 
-  if (queryResult[5] != to_string(sb->st_size) ) {
+  if (result[5] != to_string(sb->st_size) ) {
     status = true;
-    result_formatter("size", to_string(sb->st_size),
-                     queryResult[5], m);
+    resultFormatter("size", to_string(sb->st_size),
+                     result[5], m);
   }
 
-  if (queryResult[6] != to_string(sb->st_mtime) ) {
+  if (result[6] != to_string(sb->st_mtime) ) {
     status = true;
-    result_formatter("mtime", to_string(sb->st_mtime),
-                     queryResult[6], m);
+    resultFormatter("mtime", to_string(sb->st_mtime),
+                     result[6], m);
   }
 
-  if (queryResult[7] != to_string(sb->st_ctime) ) {
+  if (result[7] != to_string(sb->st_ctime) ) {
     status = true;
-    result_formatter("ctime", to_string(sb->st_ctime),
-                     queryResult[7], m);
+    resultFormatter("ctime", to_string(sb->st_ctime),
+                     result[7], m);
     }
 
   if (status) {
@@ -130,13 +146,15 @@ void check_and_print_result(string &hashString,
 }
 
 
-/* simple pretty printer for outputting expected versus
- * found results */
-void result_formatter(const string &name,
-                      const string &found,
-                      const string &expected,
-                      string &result) {
 
+//
+// simple pretty printer for outputting expected versus
+// found results 
+//
+void 
+resultFormatter(const string &name, const string &found,
+                const string &expected, string &result) 
+{
   result = result + name + " mismatch :: ";
   result = result + "(F) " + found + " | ";
   result = result + "(C) " + expected + "\n";
@@ -144,10 +162,13 @@ void result_formatter(const string &name,
 
 
 
-/* function computing the sha256 hash of the file
- * reference by ifstream file */
-sha256Hash hash_as_sha256(ifstream &file) {
-  
+//
+// function computing the sha256 hash of the file
+// reference by ifstream file 
+//
+Sha256Hash 
+hashAsSha256(ifstream &file) 
+{
   // initialize OpenSSL
   SHA256_CTX context;
   unsigned char md[SHA256_DIGEST_LENGTH];
@@ -162,7 +183,7 @@ sha256Hash hash_as_sha256(ifstream &file) {
 
   SHA256_Final(md, &context);
 
-  sha256Hash hash(new vector<unsigned char>);
+  Sha256Hash hash(new vector<unsigned char>);
   std::copy(md, md+SHA256_DIGEST_LENGTH, std::back_inserter(*hash));
   
   return hash;
@@ -170,9 +191,12 @@ sha256Hash hash_as_sha256(ifstream &file) {
 
 
 
-/* sconcho usage information */
-void usage() {
-
+// 
+// sconcho usage information 
+//
+void 
+usage() 
+{
   cout << "mescalero v " << VERSION << " (C) 2012 Markus Dittrich\n\n"
        << "usage: mescalero -p password [options]\n\n"
        << "Available options (at least one is required):\n\n"
