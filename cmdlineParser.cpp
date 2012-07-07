@@ -19,16 +19,19 @@
  */
 
 #include <string>
-#include <unistd.h>
 #include <iostream>
+#include <termios.h>
+#include <unistd.h>
 #include <vector>
 
 #include "cmdlineParser.hpp"
 #include "misc.hpp"
 
 using std::cout;
+using std::cin;
 using std::endl;
 using std::string;
+using std::getline;
 using std::vector;
 
 
@@ -89,9 +92,17 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
   }
 
   if (cmdLineOpts.password.empty()) {
-    errMsg("You must provide a password for encrypting the database.");
-    usage();
-    return 1;
+
+    // turn off echoing 
+    termios oldt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    termios newt = oldt;
+    newt.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    
+    cout << "Please enter your password: ";
+    getline(cin, cmdLineOpts.password);
+    cout << endl;
   }
 
   if (cmdLineOpts.dataBasePath.empty()) {

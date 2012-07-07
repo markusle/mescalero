@@ -86,7 +86,7 @@ main(int argc, char** argv)
       }
     }
     else {
-      errMsg("No paths for file checking defined.");
+      errMsg("Incorrect password or no paths for file checking defined.");
       return 1;
     }
   }
