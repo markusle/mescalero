@@ -46,12 +46,8 @@ using std::vector;
 
 
 
-// hardcoded path to database for now 
-const string DATABASE_PATH = "test.db";
-
 // intervall at which transactions are committed */
 const int COMMIT_INTERVAL = 20000;
-
 
 
 //
@@ -66,7 +62,7 @@ main(int argc, char** argv)
   }
 
   // open database
-  DataBase db(DATABASE_PATH, options.password, true);
+  DataBase db(options.dataBasePath, options.password, true);
   if (!db.success()) {
     cerr << "Failed to open database" << endl;
     return 1;

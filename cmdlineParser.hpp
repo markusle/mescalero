@@ -23,16 +23,21 @@
 
 
 // macros for type of request 
-enum actionToggle {NONE, 
-                   UPDATE_FILE_REQUEST, 
-                   CHECK_REQUEST,
-                   UPDATE_PATH_REQUEST,
-                   LIST_PATH_REQUEST};
+enum actionToggle 
+{
+  NONE, 
+  UPDATE_FILE_REQUEST, 
+  CHECK_REQUEST,
+  UPDATE_PATH_REQUEST,
+  LIST_PATH_REQUEST
+};
 
 
 
 // structure describing commandline options 
-struct CmdLineOpts {
+struct CmdLineOpts 
+{
+  std::string dataBasePath;
   std::string password;
   actionToggle action;
   std::vector<std::string> pathList;

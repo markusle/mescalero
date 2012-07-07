@@ -49,8 +49,11 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
   cmdLineOpts.action = NONE;
   cmdLineOpts.password = "";
   int c;
-  while ((c = getopt(argc,argv, "p:ucfl") ) != -1 ) {
+  while ((c = getopt(argc,argv, "d:p:ucfl") ) != -1 ) {
     switch (c) {
+        case 'd':
+          cmdLineOpts.dataBasePath = string(optarg);
+          break;
         case 'u':
           cmdLineOpts.action = UPDATE_FILE_REQUEST;
           break;
@@ -87,6 +90,12 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
 
   if (cmdLineOpts.password.empty()) {
     errMsg("You must provide a password for encrypting the database.");
+    usage();
+    return 1;
+  }
+
+  if (cmdLineOpts.dataBasePath.empty()) {
+    errMsg("You must provide a path to the database file.");
     usage();
     return 1;
   }

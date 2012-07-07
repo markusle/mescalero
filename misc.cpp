@@ -45,7 +45,7 @@ using std::shared_ptr;
 void 
 errMsg(std::string message) 
 {
-  cerr << "Error: " << message << endl;
+  cerr << "Error: " << message << "\n" << endl;
 }
 
 
@@ -198,7 +198,7 @@ void
 usage() 
 {
   cout << "mescalero v " << VERSION << " (C) 2012 Markus Dittrich\n\n"
-       << "usage: mescalero -p password [options]\n\n"
+       << "usage: mescalero -p <password> -d <database path> [options]\n\n"
        << "Available options (at least one is required):\n\n"
        << "\t-c\n"
        << "\t   check file properties\n\n"
