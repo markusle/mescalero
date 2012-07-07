@@ -89,6 +89,10 @@ main(int argc, char** argv)
         return 1;
       }
     }
+    else {
+      errMsg("No paths for file checking defined.");
+      return 1;
+    }
   }
 
   if (options.action == LIST_PATH_REQUEST) {
