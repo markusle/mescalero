@@ -291,8 +291,15 @@ walkPathToCheck(FTS* fileTree, DataBase& db)
 
   while ((file = fts_read(fileTree))) {
     if (file->fts_info == FTS_F) {
-      if (allFiles.find(file->fts_accpath) == allFiles.end()) {
-        cerr << "Warning: " << file->fts_accpath << " not in database\n"
+      // skip files we can't open since they won'r be in the database
+      string fileName(file->fts_accpath);
+      ifstream openFile(fileName);
+      if (!openFile) {
+        continue;
+      }
+
+      if (allFiles.find(fileName) == allFiles.end()) {
+        cerr << "Warning: " << fileName << " not in database\n"
              << endl;
       }
     }
