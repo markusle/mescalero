@@ -198,8 +198,12 @@ void
 usage() 
 {
   cout << "mescalero v " << VERSION << " (C) 2012 Markus Dittrich\n\n"
-       << "usage: mescalero -p <password> -d <database path> [options]\n\n"
+       << "usage: mescalero [options]\n\n"
        << "Available options (at least one is required):\n\n"
+       << "\t-p\n"
+       << "\t   password  (*)\n\n"
+       << "\t-d\n"
+       << "\t   path to database  (*)\n\n"
        << "\t-c\n"
        << "\t   check file properties\n\n"
        << "\t-u\n"
@@ -214,7 +218,8 @@ usage()
        << "\t   Similar to -f but will append/remove file paths from the\n"
        << "\t   current list. Filepaths can be prefixed with '+' or '-' to\n"
        << "\t   append or remove them from the current list, respectively.\n"
-       << "\t   Without any '+' or '-' prefix, '+' is assumed implicitly.\n"
+       << "\t   Without any '+' or '-' prefix, '+' is assumed implicitly.\n\n"
+       << "Options with (*) are required.\n"
        << "\n"
        << endl;
 }

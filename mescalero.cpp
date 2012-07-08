@@ -103,11 +103,18 @@ main(int argc, char** argv)
     cout << endl;
   }
   else if (options.action == UPDATE_FILE_REQUEST) {
+    cout << "Updating database. This may take some time ...." << endl;
     if (updateFileProperties(db, paths) != 0) {
       return 1;
     }
+
+    // provide quick feedback
+    QueryResult results(db.query("SELECT * from FileTable"));
+    cout << results.size() << " files have been scanned." << endl;
   }
   else if (options.action == CHECK_REQUEST) {
+    cout << "Checking filesystem against database. "
+         << "This may take some time ...." << endl;
     // check properties of all known files
     checkDatabaseAgainstFs(db);
     
@@ -422,13 +429,14 @@ appendRemovePaths(DataBase& db, const vector<string>& paths)
       continue;
     }
 
-    // remove
     string realName = path.substr(1, path.size()-1);
+    
+    // remove
+    // NOTE: use realname directly, otherwise we can't remove
+    //       stale paths that don't exist any more
     if (path[0] == '~') {
-      boost::filesystem::path absPath = 
-        boost::filesystem::canonical(realName);
       db.query("DELETE FROM ConfigTable WHERE path=\"" 
-               + absPath.string() + "\";"); 
+               + realName + "\";"); 
     } // append
     else if (path[0] == '+') {
       boost::filesystem::path absPath = 
