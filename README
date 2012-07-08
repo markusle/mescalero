@@ -1,9 +1,69 @@
-WARNING: mescalero is still experimental -- use at your own risk ;)
+WARNING: mescalero is still a bit experimental -- use at your own risk ;)
 
-mescalero requires the use of the encrypted slite3 backend provided
-by Sqlcipher <http://sqlcipher.net>.
+Mescalero is being developed as a lightweight tool for file system consistency
+checking. It is targeted toward unix-like OS but has so far only been
+tested on Linux. Both mescalero's settings and the filesystem status itself
+are stored in a single encrypted Sqlite3 database using Sqlcipher 
+(<http://sqlcipher.net>). Thus, it should be fairly easy to store
+this database offline, on a thumbdrive, etc.
 
-The coding conventions follow more or less what is suggested at
-<http://geosoft.no/development/cppstyle.html>.
+Mescalaro has only a few dependencies which are:
+
+- a recent version of OpenSSL for computing the sha256 file hashes
+- the encrypted slite3 backend provided by Sqlcipher 
+  <http://sqlcipher.net> for storing the database.
+
+
+BUILDING:
+---------
+
+The build system is pretty crummy right now and uses a single 
+Makefile. After adjusting the paths to the sqlcipher include and
+object files mescalero should compile fairly straightforwardly. 
+Hopefully, the current state of affairs of the build system
+will improve soon. Please note that mescalero uses C++11
+throughout so you will have to use a recent version of gcc
+of clang for compiling.
+
+
+USAGE:
+------
+
+Usage is very simple and fully command line based. Each call
+to mescalero needs to supply a password (for encrypting the
+database) and path to the database itself (if it doesn't exist
+it will be created). If no password is provided mescalero will
+ask for one. 
+
+Next, add the paths which mescalero should scan and track, e.g.
+
+# mescalero -p <password> -d <path to database> -f path1 path2 path3
+
+to add path1, path2 and path3. Each path can either be a directory
+or individual file. In the former case, all files contained within
+the directory will be included (recursively). You can use the -l switch 
+to list the currently tracked paths and the -a switch to add (by
+prefixing a path with '+' or simply providing a path) or remove (by
+prefixing a path with '~') paths from the list.
+
+Then, update the file properties via
+
+# mescalero -p <password> -d <path to database> -u
+
+Depending on the number of files contained within the current set
+of paths this may take some time (why not get a nice cup of coffee
+in the meantime).
+
+Finally, you can check your filesystem against the information stored
+in the database via
+
+# mescalero -p <password> -d <path to database> -c
+
+Mescalero will list all changed files, files that have disappeared,
+as well as new files which are present on the filesystem but are missing
+from the database. After reviewing the current state you can then
+take the proper action or update the database if all looks well.
+
+Enjoy!
 
 
