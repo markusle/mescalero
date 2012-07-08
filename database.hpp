@@ -32,7 +32,8 @@ class DataBase {
 
 public:
 
-  DataBase(std::string databaseName, std::string password, bool verbose);
+  explicit DataBase(std::string databaseName, std::string password, 
+                    bool verbose);
   ~DataBase(); 
   
   QueryResult query(std::string query);

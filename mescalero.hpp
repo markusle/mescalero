@@ -56,6 +56,9 @@ int checkDatabaseAgainstFs(DataBase& db);
 int updatePaths(DataBase& db, 
                 const std::vector<std::string>& paths);
 
+int appendRemovePaths(DataBase& db,
+                      const std::vector<std::string>& paths);
+
 int updateFileProperties(DataBase& db,
                          const std::vector<std::string>& paths);
 

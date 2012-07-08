@@ -75,9 +75,11 @@ main(int argc, char** argv)
   // the database
   vector<string> paths;
   if (options.action == UPDATE_PATH_REQUEST) {
-    updatePaths(db, options.pathList);
-    return 0;
-  } 
+    return updatePaths(db, options.pathList);
+  }
+  else if (options.action == APPEND_REMOVE_PATH_REQUEST) {
+    return appendRemovePaths(db, options.pathList);
+  }
   else {
     if (db.hasTable("ConfigTable")) {
       if (getPathsFromDatabase(db, paths) != 0) {
@@ -388,6 +390,58 @@ updatePaths(DataBase& db, const vector<string>& paths)
     boost::filesystem::path absPath = boost::filesystem::canonical(path);
     db.query("INSERT INTO ConfigTable (path) VALUES (\"" 
         + absPath.string() + "\");");
+  }
+
+  db.query("COMMIT TRANSACTION");
+  if (!db.success()) {
+    db.query("ROLLBACK TRANSACTION");
+  }
+
+  return 0;
+}
+
+
+
+//
+// append or remove scanning paths to/from the current list. If
+// paths are prefixed with '+' they will be added and if they are
+// prefixed with '-' they will be subtracted. Without any prefix,
+// an implicit '+' is assumed.
+//
+int 
+appendRemovePaths(DataBase& db, const vector<string>& paths)
+{
+  if (!db.hasTable("ConfigTable")) {
+    return 1;
+  }
+
+  db.query("BEGIN IMMEDIATE TRANSACTION");
+
+  for (const string& path : paths) {
+    if (path.empty()) {
+      continue;
+    }
+
+    // remove
+    string realName = path.substr(1, path.size()-1);
+    if (path[0] == '~') {
+      boost::filesystem::path absPath = 
+        boost::filesystem::canonical(realName);
+      db.query("DELETE FROM ConfigTable WHERE path=\"" 
+               + absPath.string() + "\";"); 
+    } // append
+    else if (path[0] == '+') {
+      boost::filesystem::path absPath = 
+        boost::filesystem::canonical(realName);
+      db.query("INSERT INTO ConfigTable (path) VALUES (\"" 
+                + absPath.string() + "\");"); 
+    }
+    else {
+      boost::filesystem::path absPath = 
+        boost::filesystem::canonical(path);
+      db.query("INSERT INTO ConfigTable (path) VALUES (\"" 
+                + absPath.string() + "\");");
+    }
   }
 
   db.query("COMMIT TRANSACTION");

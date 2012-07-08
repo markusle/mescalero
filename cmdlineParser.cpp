@@ -52,7 +52,7 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
   cmdLineOpts.action = NONE;
   cmdLineOpts.password = "";
   int c;
-  while ((c = getopt(argc,argv, "d:p:ucfl") ) != -1 ) {
+  while ((c = getopt(argc,argv, "d:p:ucfla") ) != -1 ) {
     switch (c) {
         case 'd':
           cmdLineOpts.dataBasePath = string(optarg);
@@ -68,6 +68,9 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
           break;
         case 'f':
           cmdLineOpts.action = UPDATE_PATH_REQUEST;
+          break;
+        case 'a':
+          cmdLineOpts.action = APPEND_REMOVE_PATH_REQUEST;
           break;
         case 'p':
           cmdLineOpts.password = string(optarg);
@@ -112,7 +115,9 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
   }
 
   // grab list of paths if requested
-  if (cmdLineOpts.action == UPDATE_PATH_REQUEST) {
+  if (cmdLineOpts.action == UPDATE_PATH_REQUEST ||
+      cmdLineOpts.action == APPEND_REMOVE_PATH_REQUEST) {
+
     // need at least one path
     if (optind == argc) {
       return 1;

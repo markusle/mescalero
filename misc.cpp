@@ -207,7 +207,14 @@ usage()
        << "\t-l\n"
        << "\t   list the current set of file paths\n\n"
        << "\t-f <list of file paths>\n"
-       << "\t   update file paths for file checking\n\n"
+       << "\t   set new file paths for file checking.\n"
+       << "\t   NOTE: This will erase all previously added paths and\n"
+       << "\t         replace them with the new ones.\n\n"
+       << "\t-a\n"
+       << "\t   Similar to -f but will append/remove file paths from the\n"
+       << "\t   current list. Filepaths can be prefixed with '+' or '-' to\n"
+       << "\t   append or remove them from the current list, respectively.\n"
+       << "\t   Without any '+' or '-' prefix, '+' is assumed implicitly.\n"
        << "\n"
        << endl;
 }
