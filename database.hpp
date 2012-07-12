@@ -24,7 +24,7 @@
 #include "sqlcipher.h"
 
 
-typedef std::vector<std::vector<std::string>> QueryResult;
+using QueryResult = std::vector<std::vector<std::string>>;
 
 
 // lightweight wrapper around sqlite3 database 
