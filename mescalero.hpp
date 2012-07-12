@@ -43,7 +43,7 @@ int checkFile(std::vector<std::string> referenceValues);
 
 int walkPath(std::string path,
              DataBase& db,
-             actionToggle requestType);
+             Action requestType);
 
 int walkPathToUpdate(FTS* fileTree,
                      DataBase& db);

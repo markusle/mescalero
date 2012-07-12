@@ -49,7 +49,7 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
   }
 
   // check command line arguments
-  cmdLineOpts.action = NONE;
+  cmdLineOpts.action = Action::NONE;
   cmdLineOpts.password = "";
   int c;
   while ((c = getopt(argc,argv, "d:p:ucfla") ) != -1 ) {
@@ -58,19 +58,19 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
           cmdLineOpts.dataBasePath = string(optarg);
           break;
         case 'u':
-          cmdLineOpts.action = UPDATE_FILE_REQUEST;
+          cmdLineOpts.action = Action::UPDATE_FILE_REQUEST;
           break;
         case 'c':
-          cmdLineOpts.action = CHECK_REQUEST;
+          cmdLineOpts.action = Action::CHECK_REQUEST;
           break;
         case 'l':
-          cmdLineOpts.action = LIST_PATH_REQUEST;
+          cmdLineOpts.action = Action::LIST_PATH_REQUEST;
           break;
         case 'f':
-          cmdLineOpts.action = UPDATE_PATH_REQUEST;
+          cmdLineOpts.action = Action::UPDATE_PATH_REQUEST;
           break;
         case 'a':
-          cmdLineOpts.action = APPEND_REMOVE_PATH_REQUEST;
+          cmdLineOpts.action = Action::APPEND_REMOVE_PATH_REQUEST;
           break;
         case 'p':
           cmdLineOpts.password = string(optarg);
@@ -88,7 +88,7 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
   }
 
   // make sure user specified one of u or c
-  if (cmdLineOpts.action == NONE) {
+  if (cmdLineOpts.action == Action::NONE) {
     errMsg("Please specify at least one option!");
     usage();
     return 1;
@@ -115,8 +115,8 @@ parseCommandline(int argc, char** argv, CmdLineOpts& cmdLineOpts)
   }
 
   // grab list of paths if requested
-  if (cmdLineOpts.action == UPDATE_PATH_REQUEST ||
-      cmdLineOpts.action == APPEND_REMOVE_PATH_REQUEST) {
+  if (cmdLineOpts.action == Action::UPDATE_PATH_REQUEST ||
+      cmdLineOpts.action == Action::APPEND_REMOVE_PATH_REQUEST) {
 
     // need at least one path
     if (optind == argc) {

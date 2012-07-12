@@ -74,10 +74,10 @@ main(int argc, char** argv)
   // update paths to be check if requested or grab them from
   // the database
   vector<string> paths;
-  if (options.action == UPDATE_PATH_REQUEST) {
+  if (options.action == Action::UPDATE_PATH_REQUEST) {
     return updatePaths(db, options.pathList);
   }
-  else if (options.action == APPEND_REMOVE_PATH_REQUEST) {
+  else if (options.action == Action::APPEND_REMOVE_PATH_REQUEST) {
     return appendRemovePaths(db, options.pathList);
   }
   else {
@@ -93,7 +93,7 @@ main(int argc, char** argv)
     }
   }
 
-  if (options.action == LIST_PATH_REQUEST) {
+  if (options.action == Action::LIST_PATH_REQUEST) {
     cout << "Currently active paths: \n\n";
 
     for (string& val : paths) {
@@ -102,7 +102,7 @@ main(int argc, char** argv)
 
     cout << endl;
   }
-  else if (options.action == UPDATE_FILE_REQUEST) {
+  else if (options.action == Action::UPDATE_FILE_REQUEST) {
     cout << "Updating database. This may take some time ...." << endl;
     if (updateFileProperties(db, paths) != 0) {
       return 1;
@@ -112,7 +112,7 @@ main(int argc, char** argv)
     QueryResult results(db.query("SELECT * from FileTable"));
     cout << results.size() << " files have been scanned." << endl;
   }
-  else if (options.action == CHECK_REQUEST) {
+  else if (options.action == Action::CHECK_REQUEST) {
     cout << "Checking filesystem against database. "
          << "This may take some time ...." << endl;
     // check properties of all known files
@@ -140,7 +140,7 @@ int
 checkDatabaseAgainstFs(DataBase& db)
 {
   QueryResult results(db.query("SELECT * from FileTable"));
-  for (vector<string>& result : results) {
+  for (const vector<string>& result : results) {
     
     if (result.size() != 8) {
       errMsg("incomplete query from database. ");
@@ -184,13 +184,13 @@ getPathsFromDatabase(DataBase& db, vector<string> &paths)
 // walk directory hierarchy starting at path 
 //
 int 
-walkPath(string path, DataBase& db, actionToggle requestType) 
+walkPath(string path, DataBase& db, Action requestType) 
 {
   FTS* fileTree;
   char* paths[] = {(char*)path.c_str(), NULL};
 
   int options = FTS_LOGICAL;
-  if (requestType == CHECK_REQUEST) {
+  if (requestType == Action::CHECK_REQUEST) {
     options |= FTS_NOSTAT;
   }
 
@@ -201,12 +201,12 @@ walkPath(string path, DataBase& db, actionToggle requestType)
   }
 
   // walk tree depending on request
-  if (requestType == UPDATE_FILE_REQUEST) {
+  if (requestType == Action::UPDATE_FILE_REQUEST) {
     if (walkPathToUpdate(fileTree, db) != 0) {
       return 1;
     }
   }
-  else if (requestType == CHECK_REQUEST) {
+  else if (requestType == Action::CHECK_REQUEST) {
    if (walkPathToCheck(fileTree, db) != 0) {
       return 1;
     }
@@ -478,7 +478,7 @@ updateFileProperties(DataBase& db, const vector<string>& paths)
             "mode TEXT, size TEXT, mtime TEXT, ctime TEXT)");
 
   for (const string& path : paths) {
-    if (walkPath(path, db, UPDATE_FILE_REQUEST) != 0) {
+    if (walkPath(path, db, Action::UPDATE_FILE_REQUEST) != 0) {
       errMsg("Error occured in walkPath");
       return 1;
     }

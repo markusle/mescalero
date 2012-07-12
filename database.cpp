@@ -38,9 +38,9 @@ using std::vector;
 // 
 ////////////////////////////////////////////////////////////////////////
 DataBase::DataBase(string databaseName, string password, bool verbose) :
-  db_(NULL),
-  success_(true),
-  verbose_(verbose) {
+  db_(nullptr),
+  success_{true},
+  verbose_{verbose} {
 
   if (openDatabase_(databaseName, password) != 0) {
     success_ = false;
@@ -109,7 +109,7 @@ QueryResult DataBase::query(string query) {
 bool 
 DataBase::hasTable(string tableName) 
 {
-  string checkQuery("SELECT 1 FROM ");
+  string checkQuery{"SELECT 1 FROM "};
   checkQuery += tableName;
   checkQuery += ";";
 

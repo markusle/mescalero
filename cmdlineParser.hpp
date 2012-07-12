@@ -23,7 +23,7 @@
 
 
 // macros for type of request 
-enum actionToggle 
+enum class Action
 {
   NONE, 
   UPDATE_FILE_REQUEST, 
@@ -40,7 +40,7 @@ struct CmdLineOpts
 {
   std::string dataBasePath;
   std::string password;
-  actionToggle action;
+  Action action;
   std::vector<std::string> pathList;
 };
 

@@ -92,7 +92,7 @@ checkAndPrintResult(const string& hashString,
                     const vector<std::string>& result,
                     const string& fileName, const struct stat *sb) 
 {
-  bool status = false;
+  bool status{false};
   string m;
   if (result[1] != hashString) {
     status = true;
