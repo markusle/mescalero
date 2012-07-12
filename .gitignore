@@ -3,3 +3,4 @@ test.db
 *.o
 \#*
 TAGS
+tags

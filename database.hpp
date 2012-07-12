@@ -35,6 +35,12 @@ public:
   explicit DataBase(std::string databaseName, std::string password, 
                     bool verbose);
   ~DataBase(); 
+
+  // no copy, move or assignment
+  DataBase(const DataBase&) = delete;
+  DataBase(DataBase&&) = delete;
+  DataBase& operator=(const DataBase&) = delete;
+  DataBase& operator=(DataBase&&) = delete;
   
   QueryResult query(std::string query);
   
