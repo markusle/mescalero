@@ -27,7 +27,7 @@
 
 
 // typedefs 
-using Sha256Hash = std::shared_ptr<std::vector<unsigned char>>;
+using Sha256Hash = std::unique_ptr<std::vector<unsigned char>>;
 
 
 // function declarations 
