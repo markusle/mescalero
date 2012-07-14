@@ -1,4 +1,4 @@
-CC = clang++
+CC = g++
 CPPFLAGS = -DSQLITE_HAS_CODEC
 INCLUDE = -I/home/markus/programming/cpp/sqlcipher/sqlcipher
 CFLAGS = -std=c++11 -Wall -O4 

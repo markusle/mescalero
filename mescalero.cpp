@@ -27,6 +27,7 @@
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
+#include <thread>
 #include <time.h>
 #include <unistd.h>
 #include <unordered_set>
@@ -115,8 +116,9 @@ main(int argc, char** argv)
   else if (options.action == Action::CHECK_REQUEST) {
     cout << "Checking filesystem against database. "
          << "This may take some time ...." << endl;
-    // check properties of all known files
-    checkDatabaseAgainstFs(db);
+    
+    // check properties of all known files in a separate thread
+    std::thread checker(checkDatabaseAgainstFs, std::ref(db));
     
     // check if any files present are not in database
     for (string &path : paths) {
@@ -125,6 +127,9 @@ main(int argc, char** argv)
         return 1;
       }
     }
+
+    // wait for checker thread
+    checker.join();
   }
 
   return 0;
@@ -286,8 +291,6 @@ walkPathToUpdate(FTS* fileTree, DataBase& db)
 int 
 walkPathToCheck(FTS* fileTree, DataBase& db)
 {
-  FTSENT* file;
-
   QueryResult result(db.query("SELECT * FROM FileTable;"));
   unordered_set<string> allFiles;
   for(vector<string>& item : result) {
@@ -298,6 +301,7 @@ walkPathToCheck(FTS* fileTree, DataBase& db)
     allFiles.emplace(item[0]);
   }
 
+  FTSENT* file;
   while ((file = fts_read(fileTree))) {
     if (file->fts_info == FTS_F) {
       // skip files we can't open since they won'r be in the database
